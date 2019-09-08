@@ -1,0 +1,61 @@
+# Router X
+[router routerX BirdRouterNode]
+configfile = /root/routers/rX/config/bird.conf
+routes = 172.16.100.0/24 via 172.16.10.10
+         fefe:1::/64 via fefe::10
+
+[network-interface routerX eth0]
+mac = 02:01:00:00:00:01
+ips = 192.168.0.1/24
+      fec0::1/64
+switch = switchA
+
+[network-interface routerX eth9]
+mac = 02:01:00:00:00:02
+ips = 172.16.10.1/24
+      fefe::1/64
+
+
+# Router Y
+[router routerY BirdRouterNode]
+configfile = /root/routers/rY/config/bird.conf
+
+[network-interface routerY eth0]
+mac = 02:02:00:00:00:01
+ips = 192.168.0.2/24
+      fec0::2/64
+switch = switchA
+
+
+# Router A
+[router routerA BirdRouterNode]
+configfile = /root/routers/rA/config/bird.conf
+
+[network-interface routerA eth0]
+mac = 02:03:00:00:00:01
+ips = 192.168.0.3/24
+      fec0::3/64
+switch = switchA
+
+[network-interface routerA eth1]
+mac = 02:03:00:00:00:02
+ips = 192.168.1.1/24
+      fec0:1::1/64
+switch = switchB
+
+
+# Router B
+[router routerB BirdRouterNode]
+configfile = /root/routers/rB/config/bird.conf
+
+[network-interface routerB eth0]
+mac = 02:04:00:00:00:01
+ips = 192.168.1.2/24
+      fec0:1::2/64
+switch = switchB
+
+[network-interface routerB eth9]
+mac = 02:04:00:00:00:02
+ips = 172.16.20.1/24
+      febe::2/64
+

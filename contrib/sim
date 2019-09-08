@@ -1,0 +1,173 @@
+#!/usr/bin/python
+# Copyright (C) 2019, AllWorldIT.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+"""Namespace Network Simulator."""
+
+import argparse
+import configparser
+import os
+import sys
+
+sys.path.insert(0, '%s/src' % os.path.dirname(os.path.abspath(__file__)))
+
+from nsnetsim.topology import Topology
+from nsnetsim.bird_router_node import BirdRouterNode
+
+__version__ = '0.0.1'
+
+
+def _load_topology(configfile: str) -> Topology:
+    """Run the network simulation."""
+
+    config = configparser.ConfigParser()
+    config.read(configfile)
+
+    topology = Topology()
+
+    for section in config.sections():
+        # Split the section name up into its components
+        (node_type, router_name, arg) = section.split()
+
+        # Check we at least have node_type and router_name
+        if not node_type or not router_name:
+            raise RuntimeError('The configuration file must have at least two components in the section "[NODE_TYPE ROUTER_NAME]"')
+
+        # Check if this is a router
+        if node_type == 'router':
+            # Check we have a arg
+            if not arg:
+                raise RuntimeError('To define a router you need to add a type "[router ROUTER_NAME ROUTER_TYPE]"')
+
+            # Check the router type is supported
+            if arg == 'BirdRouterNode':
+                router_type = BirdRouterNode
+            else:
+                raise RuntimeError('Router type "{arg}" not supported?')
+
+            # Grab config file
+            configfile = None
+            if 'configfile' in config[section]:
+                configfile = config[section]['configfile']
+
+            # Add the router
+            router = topology.add_router(router_name, router_class=router_type,
+                                         configfile=configfile)
+
+            # Grab routes we may have and add them
+            if 'routes' in config[section]:
+                routes = config[section]['routes']
+                for route in routes.splitlines():
+                    router.add_route(route.split())
+
+        # Check if this is a network interface
+        elif node_type == 'network-interface':
+            # Check we have a arg
+            if not arg:
+                raise RuntimeError('To define a router you need to add a type "[network-interface ROUTER_NAME INTERFACE_NAME]"')
+
+            # Try get node
+            router = topology.get_node(router_name)
+            if not router:
+                raise RuntimeError(f'Router node "{router_name}" not found')
+
+            # Work out MAC address
+            mac = None
+            if 'mac' in config[section]:
+                mac = config[section]['mac']
+
+            # Add the interface
+            interface = router.add_interface(name=arg, mac=mac)
+
+            # Check if we should link this interface to a switch
+            if 'switch' in config[section]:
+                switch_name = config[section]['switch']
+                # Grab the switch from the topology
+                switch = topology.get_node(switch_name)
+                # If we didn't get one, create it
+                if not switch:
+                    switch = topology.add_switch(switch_name)
+                # Add the interface to the switch...
+                switch.add_interface(interface)
+
+            # Add IP's to interface
+            if 'ips' in config[section]:
+                interface_ips = config[section]['ips']
+                for interface_ip in interface_ips.splitlines():
+                    interface.add_ip(interface_ip)
+
+        # Check if this is a network interface
+        else:
+            raise RuntimeError(f'Unsupported configuration item "{node_type}"')
+
+    # Return the topology we just created
+    return topology
+
+
+def start(configfile: str):
+    """Start the simulation."""
+    topology = _load_topology(configfile)
+    topology.build()
+
+
+def stop(configfile: str):
+    """Stop the simulation."""
+    topology = _load_topology(configfile)
+    topology.destroy()
+
+
+def cmdline():
+    """Process command line arguments."""
+
+    print(f'nsNetSim v{__version__} - Copyright © 2019, AllWorldIT.\n')
+
+# Start argument parser
+    argparser = argparse.ArgumentParser(add_help=False)
+    # Create argument group for main options
+    main_group = argparser.add_argument_group('Main options')
+    main_group.add_argument('--config', dest='configfile', action='store',
+                            help='Load configuration from this file')
+    main_group.add_argument('cmd', metavar='CMD', type=str, nargs='?', choices=['start', 'stop', 'exec'], help='Command to run')
+    main_group.add_argument('cmdargs', metavar='CMDARGS', type=str, nargs='*', help="Arguments for CMD")
+    # Create argument group for optionals
+    optional_group = argparser.add_argument_group('Optional arguments')
+    optional_group.add_argument('-n', '--node', dest="node", help="Node to run command on")
+    optional_group.add_argument('-h', '--help', action="help", help="Show this help message and exit")
+
+    # Parse args
+    args = argparser.parse_args()
+
+    if not args.cmd:
+        print(f'ERROR: No command given')
+        exit(1)
+
+    if args.cmd in ('start', 'stop'):
+        if args.cmdargs:
+            print(f'ERROR: The "{args.cmd}" command does not support arguments')
+            exit(1)
+        if not args.configfile:
+            print(f'ERROR: The "{args.cmd}" command requires a "--config" argument')
+            exit(1)
+
+    if args.cmd == 'start':
+        start(args.configfile)
+
+    elif args.cmd == 'stop':
+        stop(args.configfile)
+
+
+
+if __name__ == '__main__':
+    cmdline()
