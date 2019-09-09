@@ -1,9 +1,26 @@
 """Tests for BIRD."""
 
+import re
 import time
 
 from nsnetsim.topology import Topology
 from nsnetsim.bird_router_node import BirdRouterNode
+
+
+class CustomPytestRegex:
+    """Assert that a given string meets some expectations."""
+
+    def __init__(self, pattern, flags=0):
+        """Inititalize object."""
+        self._regex = re.compile(pattern, flags)
+
+    def __eq__(self, actual):
+        """Check if the 'actual' string matches the regex."""
+        return bool(self._regex.match(actual))
+
+    def __repr__(self):
+        """Return our representation."""
+        return self._regex.pattern
 
 
 class TestBirdRouterNode():
@@ -79,7 +96,7 @@ class TestBirdRouterNode():
         assert [x['nexthops'][0]['gateway'] for x in routery_master4_output if x['prefix'] == '192.168.10.0/24'][0] \
             == '192.168.0.1', 'The "gateway" should be "192.168.0.1"'
 
-        routerx_protocol_expected = ['0001 BIRD 2.0.4 ready.',
+        routerx_protocol_expected = [CustomPytestRegex(r'0001 BIRD [0-9\.]+ ready.'),
                                      '1010-master4 \trouting table',
                                      ' master6 \trouting table',
                                      '0000 ']

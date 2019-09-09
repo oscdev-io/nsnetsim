@@ -1,9 +1,13 @@
 """Namespace Network Simulator."""
 
+import re
 from setuptools import find_packages, setup
 
+main_py = open('src/nsnetsim/__init__.py').read()
+metadata = dict(re.findall("__([a-z]+)__ = '([^']+)'", main_py))
+
 NAME = 'nsnetsim'
-VERSION = '0.0.1'
+VERSION = metadata['version']
 
 with open("README.md", "r") as fh:
     LONG_DESCRIPTION = fh.read()
@@ -27,6 +31,9 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     python_requires='>=3.6',
+    install_requires =[
+        'birdclient',
+    ],
 
     packages=find_packages('src', exclude=['tests']),
     package_dir={'': 'src'},
