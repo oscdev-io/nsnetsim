@@ -31,6 +31,9 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     python_requires='>=3.6',
+    install_requires =[
+        'birdclient',
+    ],
 
     packages=find_packages('src', exclude=['tests']),
     package_dir={'': 'src'},
