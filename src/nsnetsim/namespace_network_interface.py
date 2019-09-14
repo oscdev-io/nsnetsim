@@ -18,12 +18,13 @@
 import ipaddress
 import random
 import subprocess
-from typing import List, Union
+import time
+from typing import Any, Dict, List, Union
 
 from .generic_node import GenericNode
 from .netns import NetNS
 
-__version__ = "0.0.2"
+__version__ = "0.0.4"
 
 
 class NamespaceNetworkInterface(GenericNode):
@@ -35,10 +36,7 @@ class NamespaceNetworkInterface(GenericNode):
     _ifname_host: str
     # Interface mac address
     _mac: str
-    # Fowarding
-    _forwarding: int
-    # IPv6 DAD
-    _ipv6_dad: int
+    _settings: Dict[str, Any]
     # IP's for interface
     _ip_addresses: List[str]
 
@@ -67,15 +65,19 @@ class NamespaceNetworkInterface(GenericNode):
                 random.randint(0, 255),
             )
 
-        # Enable forwarding by default
-        self._forwarding = kwargs.get('forwarding', 1)
-
-        # Disable IPv6 DAD by default
-        self._ipv6_dad = kwargs.get('ipv6_dad', 0)
+        self._settings = {
+            # Enable forwarding by default
+            'forwarding': kwargs.get('forwarding', 1),
+            # Disable IPv6 DAD by default
+            'ipv6_dad': kwargs.get('ipv6_dad', 0),
+            # Disable IPv6 RA by default
+            'ipv6_ra': kwargs.get('ipv6_ra', 0),
+        }
 
         # Start with a clean list of IP's
         self._ip_addresses = []
 
+    # pylama: ignore=C901
     def _create(self):
         """Create the interface."""
 
@@ -86,12 +88,30 @@ class NamespaceNetworkInterface(GenericNode):
                                ])
         # Set MAC address
         self.namespace.run(['ip', 'link', 'set', self.ifname, 'address', self._mac])
-        # Set interface up on host side
-        subprocess.check_call(['ip', 'link', 'set', self.ifname_host, 'up'])
-        # Set interface up on namespace side
-        self.namespace.run(['ip', 'link', 'set', self.ifname, 'up'])
+
+        # Disable host IPv6 DAD
+        with open(f'/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_dad', 'w') as ipv6_dad_file:
+            ipv6_dad_file.write('0')
+        # Disable host IPv6 RA
+        with open(f'/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_ra', 'w') as ipv6_ra_file:
+            ipv6_ra_file.write('0')
+
+        # Drop into namespace
+        with NetNS(nsname=self.namespace.namespace):
+            # Write out fowarding value
+            with open(f'/proc/sys/net/ipv4/conf/{self.ifname}/forwarding', 'w') as forwarding_file:
+                forwarding_file.write(f'{self.forwarding}')
+            with open(f'/proc/sys/net/ipv6/conf/{self.ifname}/forwarding', 'w') as forwarding_file:
+                forwarding_file.write(f'{self.forwarding}')
+            # Write out DAD value
+            with open(f'/proc/sys/net/ipv6/conf/{self.ifname}/accept_dad', 'w') as ipv6_dad_file:
+                ipv6_dad_file.write(f'{self.ipv6_dad}')
+            # Write out RA value
+            with open(f'/proc/sys/net/ipv6/conf/{self.ifname}/accept_ra', 'w') as ipv6_ra_file:
+                ipv6_ra_file.write(f'{self.ipv6_ra}')
 
         # Add ip's to the namespace interface
+        has_ipv6 = False
         for ip_address_raw in self.ip_addresses:
             args = ['ip', 'address', 'add', ip_address_raw, 'dev', self.ifname]
 
@@ -99,25 +119,65 @@ class NamespaceNetworkInterface(GenericNode):
             ip_address = ipaddress.ip_network(ip_address_raw, strict=False)
             if ip_address.version == 4:
                 args.extend(['broadcast', f'{ip_address.broadcast_address}'])
+            if ip_address.version == 6:
+                has_ipv6 = True
 
             # Set interface up on namespace side
             self.namespace.run(args)
 
-        # If we're doing fowarding
-        if self._forwarding:
-            # Drop into namespace
-            with NetNS(nsname=self.namespace.namespace):
-                # Write out fowarding value
-                with open(f'/proc/sys/net/ipv4/conf/{self.ifname}/forwarding', 'w') as forwarding_file:
-                    forwarding_file.write(f'{self.forwarding}')
-                with open(f'/proc/sys/net/ipv6/conf/{self.ifname}/forwarding', 'w') as forwarding_file:
-                    forwarding_file.write(f'{self.forwarding}')
+        # Set interface up on host side
+        subprocess.check_call(['ip', 'link', 'set', self.ifname_host, 'up'])
+        # Set interface up on namespace side
+        self.namespace.run(['ip', 'link', 'set', self.ifname, 'up'])
 
-        # Drop into namespace and set IPv6 DAD
-        with NetNS(nsname=self.namespace.namespace):
-            # Write out DAD value
-            with open(f'/proc/sys/net/ipv6/conf/{self.ifname}/accept_dad', 'w') as ipv6_dad_file:
-                ipv6_dad_file.write(f'{self.ipv6_dad}')
+        # We need to wait until the interface IPv6 is up
+        if has_ipv6:
+            attempts = 60
+            has_ll6 = False
+            has_addr = False
+            while attempts > 0:
+                # We either need a site or global address
+                if not has_addr:
+                    result = self.namespace.run(
+                        ['ip', '-6', '-oneline', 'address', 'show', 'dev', self.ifname, 'scope', 'site', '-tentative'],
+                        stdout=subprocess.PIPE, text=True,
+                    )
+                    if result.stdout:
+                        has_addr = True
+                        continue
+
+                    result = self.namespace.run(
+                        ['ip', '-6', '-oneline', 'address', 'show', 'dev', self.ifname, 'scope', 'global', '-tentative'],
+                        stdout=subprocess.PIPE, text=True,
+                    )
+                    if result.stdout:
+                        has_addr = True
+
+                # We need a link local address not in the tentative state
+                if not has_ll6:
+                    result = self.namespace.run(
+                        ['ip', '-6', '-oneline', 'address', 'show', 'dev', self.ifname, 'scope', 'link', '-tentative'],
+                        stdout=subprocess.PIPE, text=True,
+                    )
+                    if result.stdout:
+                        has_ll6 = True
+
+                # If we have both, break
+                if has_ll6 and has_addr:
+                    break
+
+                # Sleep 0.1 second
+                time.sleep(0.1)
+                attempts = attempts - 1
+
+            # Throw a runtime exception if we didn't manage to get a our addresses
+            if attempts == 0:
+                result = self.namespace.run(
+                    ['ip', '-details', '-6', 'address', 'show', 'dev', self.ifname],
+                    stdout=subprocess.PIPE, text=True,
+                )
+
+                raise RuntimeError(f'Failed to get IPv6 link-local address >> {result.stdout}')
 
     def _remove(self):
         """Remove the interface."""
@@ -150,12 +210,17 @@ class NamespaceNetworkInterface(GenericNode):
     @property
     def forwarding(self):
         """Return the interfaces forwarding attribute."""
-        return self._forwarding
+        return self._settings['forwarding']
 
     @property
     def ipv6_dad(self):
         """Return the interfaces IPv6 DAD attribute."""
-        return self._ipv6_dad
+        return self._settings['ipv6_dad']
+
+    @property
+    def ipv6_ra(self):
+        """Return the interfaces IPv6 RA attribute."""
+        return self._settings['ipv6_ra']
 
     @property
     def ip_addresses(self):
