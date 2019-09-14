@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional
 from .generic_node import GenericNode
 from .namespace_network_interface import NamespaceNetworkInterface
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 
 class NamespaceNode(GenericNode):
@@ -68,6 +68,12 @@ class NamespaceNode(GenericNode):
         for interface in self._interfaces:
             # Create interface
             interface.create()
+
+        # Enable forwarding
+        with open(f'/proc/sys/net/ipv4/conf/all/forwarding', 'w') as forwarding_file:
+            forwarding_file.write('1')
+        with open(f'/proc/sys/net/ipv6/conf/all/forwarding', 'w') as forwarding_file:
+            forwarding_file.write('1')
 
         # Add routes to the namespace
         for route in self._routes:
