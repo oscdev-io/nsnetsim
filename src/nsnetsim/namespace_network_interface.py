@@ -23,7 +23,7 @@ from typing import List, Union
 from .generic_node import GenericNode
 from .netns import NetNS
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 
 class NamespaceNetworkInterface(GenericNode):
@@ -37,6 +37,8 @@ class NamespaceNetworkInterface(GenericNode):
     _mac: str
     # Fowarding
     _forwarding: int
+    # IPv6 DAD
+    _ipv6_dad: int
     # IP's for interface
     _ip_addresses: List[str]
 
@@ -67,6 +69,9 @@ class NamespaceNetworkInterface(GenericNode):
 
         # Enable forwarding by default
         self._forwarding = kwargs.get('forwarding', 1)
+
+        # Disable IPv6 DAD by default
+        self._ipv6_dad = kwargs.get('ipv6_dad', 0)
 
         # Start with a clean list of IP's
         self._ip_addresses = []
@@ -108,6 +113,12 @@ class NamespaceNetworkInterface(GenericNode):
                 with open(f'/proc/sys/net/ipv6/conf/{self.ifname}/forwarding', 'w') as forwarding_file:
                     forwarding_file.write(f'{self.forwarding}')
 
+        # Drop into namespace and set IPv6 DAD
+        with NetNS(nsname=self.namespace.namespace):
+            # Write out DAD value
+            with open(f'/proc/sys/net/ipv6/conf/{self.ifname}/accept_dad', 'w') as ipv6_dad_file:
+                ipv6_dad_file.write(f'{self.ipv6_dad}')
+
     def _remove(self):
         """Remove the interface."""
 
@@ -140,6 +151,11 @@ class NamespaceNetworkInterface(GenericNode):
     def forwarding(self):
         """Return the interfaces forwarding attribute."""
         return self._forwarding
+
+    @property
+    def ipv6_dad(self):
+        """Return the interfaces IPv6 DAD attribute."""
+        return self._ipv6_dad
 
     @property
     def ip_addresses(self):
