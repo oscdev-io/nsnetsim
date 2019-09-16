@@ -24,7 +24,7 @@ from .generic_node import GenericNode
 from .namespace_network_interface import NamespaceNetworkInterface
 from .netns import NetNS
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 
 class NamespaceNode(GenericNode):
@@ -82,7 +82,9 @@ class NamespaceNode(GenericNode):
         for route in self._routes:
             route_args = ['ip', 'route', 'add']
             route_args.extend(route)
-            self.run(route_args)
+            res = self.run(route_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            if res.returncode != 0:
+                self._log(f'Failed to run in "{self.name}": {res.stdout}')
 
     def _remove(self):
         """Remove the namespace."""
