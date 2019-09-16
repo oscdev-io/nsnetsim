@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Union
 from .generic_node import GenericNode
 from .netns import NetNS
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 
 class NamespaceNetworkInterface(GenericNode):
@@ -111,9 +111,9 @@ class NamespaceNetworkInterface(GenericNode):
         for ip_address_raw in self.ip_addresses:
             args = ['ip', 'address', 'add', ip_address_raw, 'dev', self.ifname]
 
-            # We need to add a broadcast address for IPv4
             ip_address = ipaddress.ip_network(ip_address_raw, strict=False)
-            if ip_address.version == 4:
+            # Check if we need to add a broadcast address for IPv4
+            if (ip_address.version == 4) and (ip_address.prefixlen < 31):
                 args.extend(['broadcast', f'{ip_address.broadcast_address}'])
             if ip_address.version == 6:
                 has_ipv6 = True
