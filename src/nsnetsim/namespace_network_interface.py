@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Union
 from .generic_node import GenericNode
 from .netns import NetNS
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 
 class NamespaceNetworkInterface(GenericNode):
@@ -75,7 +75,7 @@ class NamespaceNetworkInterface(GenericNode):
         # Start with a clean list of IP's
         self._ip_addresses = []
 
-    # pylama: ignore=C901
+    # pylama: ignore=C901,R0912
     def _create(self):
         """Create the interface."""
 
@@ -85,7 +85,10 @@ class NamespaceNetworkInterface(GenericNode):
                                'type', 'veth', 'peer', self.ifname,
                                ])
         # Set MAC address
-        self.namespace.run(['ip', 'link', 'set', self.ifname, 'address', self._mac])
+        res = self.namespace.run(['ip', 'link', 'set', self.ifname, 'address', self._mac], stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT, text=True)
+        if res.returncode != 0:
+            self._log(f'Failed to set MAC address for "{self.name}" interface "{self.ifname}": {res.stdout}')
 
         # Disable host IPv6 DAD
         with open(f'/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_dad', 'w') as ipv6_dad_file:
@@ -116,7 +119,10 @@ class NamespaceNetworkInterface(GenericNode):
                 has_ipv6 = True
 
             # Set interface up on namespace side
-            self.namespace.run(args)
+            res = self.namespace.run(args)
+            if res.returncode != 0:
+                self._log(f'Failed to add IP address for "{self.name}" interface "{self.ifname}" IP "{ip_address_raw}": ' +
+                          f'{res.stdout}')
 
         # Set interface up on host side
         subprocess.check_call(['ip', 'link', 'set', self.ifname_host, 'up'])
