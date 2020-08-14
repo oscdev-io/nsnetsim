@@ -35,6 +35,5 @@ setup(
         'birdclient',
     ],
 
-    packages=find_packages('src', exclude=['tests']),
-    package_dir={'': 'src'},
+    packages=find_packages(),
 )
