@@ -24,8 +24,6 @@ from typing import Any, Dict, List, Union
 from .generic_node import GenericNode
 from .netns import NetNS
 
-__version__ = "0.0.7"
-
 
 class NamespaceNetworkInterface(GenericNode):
     """NamespaceInterface implements a network interface within a NamespaceNode."""

@@ -21,8 +21,6 @@ from .generic_node import GenericNode
 from .router_node import RouterNode
 from .switch_node import SwitchNode
 
-__version__ = "0.0.1"
-
 
 class Topology:
     """Topology implements the high level simulation setup."""

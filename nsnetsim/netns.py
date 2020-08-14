@@ -19,7 +19,6 @@
 
 import os
 
-__version__ = "0.0.1"
 
 #
 # Python doesn't expose the setns function, so we need to load it ourselves.

@@ -3,11 +3,11 @@
 import re
 from setuptools import find_packages, setup
 
-main_py = open('src/nsnetsim/__init__.py').read()
-metadata = dict(re.findall("__([a-z]+)__ = '([^']+)'", main_py))
+main_py = open('nsnetsim/__init__.py').read()
+metadata = dict(re.findall("__([A-Z]+)__ = '([^']+)'", main_py))
 
 NAME = 'nsnetsim'
-VERSION = metadata['version']
+VERSION = metadata['VERSION']
 
 with open("README.md", "r") as fh:
     LONG_DESCRIPTION = fh.read()

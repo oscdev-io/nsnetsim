@@ -15,4 +15,4 @@
 
 """Namespace Network Simulator package."""
 
-__version__ = '0.0.2rc2'
+__VERSION__ = '0.1.0'

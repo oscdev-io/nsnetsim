@@ -17,8 +17,6 @@
 
 from typing import Callable, Optional
 
-__version__ = "0.0.1"
-
 
 class GenericNode:
     """GenericNode implements a generic topology node."""

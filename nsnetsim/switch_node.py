@@ -21,8 +21,6 @@ from typing import List
 from .generic_node import GenericNode
 from .namespace_network_interface import NamespaceNetworkInterface
 
-__version__ = "0.0.1"
-
 
 class SwitchNode(GenericNode):
     """Switch implements a basic switch support for nsnetsim."""

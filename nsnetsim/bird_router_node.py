@@ -23,8 +23,6 @@ from typing import Any, Dict, List
 from birdclient import BirdClient
 from .router_node import RouterNode
 
-__version__ = "0.0.1"
-
 
 class BirdRouterNode(RouterNode):
     """BirdRouterNode implements a network isolated BIRD router node."""

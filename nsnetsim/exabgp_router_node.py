@@ -23,8 +23,6 @@ from typing import List
 
 from .router_node import RouterNode
 
-__version__ = "0.0.1"
-
 
 class ExaBGPRouterNode(RouterNode):
     """ExaBGPRouterNode implements a network isolated ExaBGP router node."""

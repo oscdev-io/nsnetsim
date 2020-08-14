@@ -17,8 +17,6 @@
 
 from .namespace_node import NamespaceNode
 
-__version__ = "0.0.1"
-
 
 class RouterNode(NamespaceNode):
     """RouterNode implements a network isolated router node."""

@@ -24,8 +24,6 @@ from .generic_node import GenericNode
 from .namespace_network_interface import NamespaceNetworkInterface
 from .netns import NetNS
 
-__version__ = "0.0.3"
-
 
 class NamespaceNode(GenericNode):
     """NamespaceNode implements the basic network namespace isolation we need for nodes."""
