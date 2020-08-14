@@ -41,7 +41,7 @@ class BirdRouterNode(RouterNode):
         super()._init()
 
         # We should be getting a config file
-        configfile = kwargs.get('configfile', None)
+        configfile = kwargs.get("configfile", None)
         if not configfile:
             raise RuntimeError('The "configfile" argument should of been provided')
         # Check it exists
@@ -51,17 +51,15 @@ class BirdRouterNode(RouterNode):
         self._configfile = configfile
 
         # Set control socket
-        self._controlsocket = f'{self._rundir}/bird-control.socket'
-        self._pidfile = f'{self._rundir}/bird.pid'
+        self._controlsocket = f"{self._rundir}/bird-control.socket"
+        self._pidfile = f"{self._rundir}/bird.pid"
 
         # Test config file
         try:
-            subprocess.check_output(['bird', '-c', self._configfile, '-p'],
-                                    stderr=subprocess.STDOUT)
+            subprocess.check_output(["bird", "-c", self._configfile, "-p"], stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as exception:
-            output = exception.output.decode('utf-8').rstrip()
-            self._log(f'ERROR: Failed to validate BIRD configuration file "{self._configfile}": '
-                      f'{output}')
+            output = exception.output.decode("utf-8").rstrip()
+            self._log(f'ERROR: Failed to validate BIRD configuration file "{self._configfile}": ' f"{output}")
             exit(1)
 
         # We start out with no process
@@ -96,14 +94,24 @@ class BirdRouterNode(RouterNode):
 
         # Run bird within the network namespace
         try:
-            subprocess.check_output([
-                'ip', 'netns', 'exec', self.namespace,
-                'bird', '-c', self._configfile, '-s', self._controlsocket, '-P', self._pidfile,
-            ])
+            subprocess.check_output(
+                [
+                    "ip",
+                    "netns",
+                    "exec",
+                    self.namespace,
+                    "bird",
+                    "-c",
+                    self._configfile,
+                    "-s",
+                    self._controlsocket,
+                    "-P",
+                    self._pidfile,
+                ]
+            )
         except subprocess.CalledProcessError as exception:
-            output = exception.output.decode('utf-8').rstrip()
-            self._log(f'ERROR: Failed to start BIRD with configuration file "{self._configfile}": '
-                      f'{output}')
+            output = exception.output.decode("utf-8").rstrip()
+            self._log(f'ERROR: Failed to start BIRD with configuration file "{self._configfile}": ' f"{output}")
             exit(1)
 
     def _remove(self):
@@ -111,13 +119,13 @@ class BirdRouterNode(RouterNode):
 
         # Grab PID of the process...
         if os.path.exists(self._pidfile):
-            with open(self._pidfile, 'r') as pidfile_file:
+            with open(self._pidfile, "r") as pidfile_file:
                 pid = int(pidfile_file.read())
             # Terminate process
             try:
                 os.kill(pid, signal.SIGTERM)
             except ProcessLookupError:
-                self._log(f'WARNING: Failed to kill BIRD process {pid}')
+                self._log(f"WARNING: Failed to kill BIRD process {pid}")
             # Remove pid file
             try:
                 os.remove(self._pidfile)

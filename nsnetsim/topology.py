@@ -42,7 +42,7 @@ class Topology:
 
         # Grab the router class name
         router_class_name = type(router_class).__name__
-        self.log(f'Adding router: [{router_class_name}] {name}')
+        self.log(f"Adding router: [{router_class_name}] {name}")
 
         # Check if router exists.. if so throw an error
         if name in self._nodes_by_name:
@@ -59,7 +59,7 @@ class Topology:
     def add_switch(self, name: str) -> SwitchNode:
         """Add a switch to our topology."""
 
-        self.log(f'Adding switch: {name}')
+        self.log(f"Adding switch: {name}")
 
         # Check if router exists.. if so throw an error
         if name in self._nodes_by_name:
@@ -75,7 +75,7 @@ class Topology:
     def build(self):
         """Build our simulated network."""
 
-        self.log(f'Building topology')
+        self.log(f"Building topology")
         # We need to create routers first
         for node in self._nodes:
             if isinstance(node, RouterNode):
@@ -88,7 +88,7 @@ class Topology:
     def destroy(self):
         """Destroy our simulated network."""
 
-        self.log(f'Destroying topology')
+        self.log(f"Destroying topology")
         # We need to remove routers first
         for node in self._nodes:
             if isinstance(node, RouterNode):
@@ -108,4 +108,4 @@ class Topology:
     def log(self, msg: str):
         """Log a message."""
 
-        print(f'LOG: {msg}')
+        print(f"LOG: {msg}")

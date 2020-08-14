@@ -50,7 +50,7 @@ def setns(filefd, nstype):
     numeric file  descriptor or a Python object with a fileno() method.
     """
 
-    if hasattr(filefd, 'fileno'):
+    if hasattr(filefd, "fileno"):
         filefd = filefd.fileno()
 
     return libc.setns(filefd, nstype)
@@ -65,12 +65,12 @@ def get_ns_path(nspath: str = None, nsname: str = None, nspid: int = None):
     """
 
     if nsname:
-        nspath = '/var/run/netns/%s' % nsname
+        nspath = "/var/run/netns/%s" % nsname
     elif nspid:
-        nspath = '/proc/%d/ns/net' % nspid
+        nspath = "/proc/%d/ns/net" % nspid
 
     if (not nspath) or (not os.path.exists(nspath)):
-        raise ValueError('namespace path %s does not exist' % nspath)
+        raise ValueError("namespace path %s does not exist" % nspath)
 
     return nspath
 
@@ -95,7 +95,7 @@ class NetNS:
         self.targetpath = get_ns_path(nspath=nspath, nsname=nsname, nspid=nspid)
 
         if not self.targetpath:
-            raise ValueError('Invalid namespace')
+            raise ValueError("Invalid namespace")
 
     def __enter__(self):
         """Enter the namespace using with NetNS(...)."""

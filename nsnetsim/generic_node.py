@@ -66,17 +66,17 @@ class GenericNode:
 
     def _create(self):
         """Create this node, should be overridden in child classes."""
-        raise NotImplementedError('The _create() method should be defined in the child class')
+        raise NotImplementedError("The _create() method should be defined in the child class")
 
     def _remove(self):
         """Remove this node, should be overridden in child classes."""
-        raise NotImplementedError('The _remove() method should be defined in the child class')
+        raise NotImplementedError("The _remove() method should be defined in the child class")
 
     def _log(self, msg: str):
         """Log a message either using the logger provided or just using print."""
 
         node_type = type(self).__name__
-        newmsg = f'[{node_type}] {msg}'
+        newmsg = f"[{node_type}] {msg}"
 
         if self._logger:
             self._logger(newmsg)

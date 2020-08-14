@@ -41,13 +41,13 @@ class NamespaceNode(GenericNode):
         """Initialize the object."""
 
         # Set the namespace name we're going to use
-        self._namespace = f'ns-{self._name}'
+        self._namespace = f"ns-{self._name}"
 
         # Start with a clean list of interfaces
         self._interfaces = []
 
         # Create a directory in /run for us
-        self._rundir = f'/run/nsnetsim/{self._namespace}'
+        self._rundir = f"/run/nsnetsim/{self._namespace}"
         if not os.path.exists(self._rundir):
             os.makedirs(self._rundir)
 
@@ -58,10 +58,10 @@ class NamespaceNode(GenericNode):
         """Create the namespace."""
 
         # Create namespace
-        subprocess.check_call(['ip', 'netns', 'add', self.namespace])
+        subprocess.check_call(["ip", "netns", "add", self.namespace])
 
         # Bring the lo interface up
-        self.run(['ip', 'link', 'set', 'lo', 'up'])
+        self.run(["ip", "link", "set", "lo", "up"])
 
         # Create interfaces
         for interface in self._interfaces:
@@ -71,14 +71,14 @@ class NamespaceNode(GenericNode):
         # Drop into namespace
         with NetNS(nsname=self.namespace):
             # Enable forwarding
-            with open(f'/proc/sys/net/ipv4/conf/all/forwarding', 'w') as forwarding_file:
-                forwarding_file.write('1')
-            with open(f'/proc/sys/net/ipv6/conf/all/forwarding', 'w') as forwarding_file:
-                forwarding_file.write('1')
+            with open(f"/proc/sys/net/ipv4/conf/all/forwarding", "w") as forwarding_file:
+                forwarding_file.write("1")
+            with open(f"/proc/sys/net/ipv6/conf/all/forwarding", "w") as forwarding_file:
+                forwarding_file.write("1")
 
         # Add routes to the namespace
         for route in self._routes:
-            route_args = ['ip', 'route', 'add']
+            route_args = ["ip", "route", "add"]
             route_args.extend(route)
             res = self.run(route_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
             if res.returncode != 0:
@@ -92,17 +92,17 @@ class NamespaceNode(GenericNode):
             interface.remove()
 
         # Remove the namespace
-        subprocess.check_call(['ip', 'netns', 'del', self.namespace])
+        subprocess.check_call(["ip", "netns", "del", self.namespace])
 
     def add_interface(self, name: str, mac: Optional[str] = None) -> NamespaceNetworkInterface:
         """Add network interface to namespace."""
 
         # Build options
         args: Dict[str, Any] = {}
-        args['name'] = name
-        args['logger'] = self._logger
-        args['namespace'] = self
-        args['mac'] = mac
+        args["name"] = name
+        args["logger"] = self._logger
+        args["namespace"] = self
+        args["mac"] = mac
 
         interface = NamespaceNetworkInterface(**args)
         self._interfaces.append(interface)
@@ -117,7 +117,7 @@ class NamespaceNode(GenericNode):
         """Run command inside the namespace."""
 
         # Build command to execute
-        cmd_args = ['ip', 'netns', 'exec', self.namespace]
+        cmd_args = ["ip", "netns", "exec", self.namespace]
         cmd_args.extend(args)
 
         # Run command
@@ -126,7 +126,7 @@ class NamespaceNode(GenericNode):
     def run_ip(self, args: List[str]) -> Any:
         """Run the 'ip' tool and decode its return output."""
         # Run the IP tool with JSON output
-        cmd_args = ['ip', '--json']
+        cmd_args = ["ip", "--json"]
         # Add our args
         cmd_args.extend(args)
 

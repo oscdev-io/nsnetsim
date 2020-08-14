@@ -33,10 +33,10 @@ class SwitchNode(GenericNode):
     def _init(self, **kwargs):
         """Initialize the object."""
 
-        name = kwargs.get('name')
+        name = kwargs.get("name")
 
         # Set the bridge name we're going to use
-        self._bridge_name = f'sw-{name}'
+        self._bridge_name = f"sw-{name}"
 
         # Start out with no interfaces added to this switch\
         self._interfaces = []
@@ -44,22 +44,19 @@ class SwitchNode(GenericNode):
     def _create(self):
         """Create the switch."""
 
-        subprocess.check_call(['ip', 'link', 'add', self.bridge_name, 'type', 'bridge',
-                               'forward_delay', '0'])
-        subprocess.check_call(['ip', 'link', 'set', self.bridge_name, 'up'])
+        subprocess.check_call(["ip", "link", "add", self.bridge_name, "type", "bridge", "forward_delay", "0"])
+        subprocess.check_call(["ip", "link", "set", self.bridge_name, "up"])
 
         # Add interfaces to the bridge by setting the bridge as the interface master
         for interface in self.interfaces:
-            self._log(f'Adding interface "{interface.name}" from "{interface.namespace.name}" '
-                      f'to switch "{self.name}"')
-            subprocess.check_call(['ip', 'link', 'set', interface.ifname_host, 'master',
-                                   self.bridge_name])
+            self._log(f'Adding interface "{interface.name}" from "{interface.namespace.name}" ' f'to switch "{self.name}"')
+            subprocess.check_call(["ip", "link", "set", interface.ifname_host, "master", self.bridge_name])
 
     def _remove(self):
         """Remove the namespace."""
 
         try:
-            subprocess.check_call(['ip', 'link', 'del', self.bridge_name])
+            subprocess.check_call(["ip", "link", "del", self.bridge_name])
         except subprocess.CalledProcessError:
             self._log(f'WARNING: Failed to remove switch "{self.bridge_name}"')
 
