@@ -44,15 +44,15 @@ class NamespaceNetworkInterface(GenericNode):
         """Initialize the object."""
 
         # Make sure we have an namespace
-        self._namespace = kwargs.get("namespace", None)
-        if not self._namespace:
-            raise RuntimeError('The argument "namespace" should of been specified')
+        self._namespace_node = kwargs.get("namespace_node", None)
+        if not self._namespace_node:
+            raise RuntimeError('The argument "namespace_node" should of been specified')
 
         # Set the namespace name we're going to use
-        self._ifname_host = f"{self.namespace.name}-{self.name}"
+        self._ifname_host = f"{self.namespace_node.name}-{self.name}"
 
         # Add some extra logging info
-        self._extra_log = f' in "{self.namespace.name}"'
+        self._extra_log = f' in "{self.namespace_node.name}"'
 
         # Assign an interface mac address
         self._mac = kwargs.get("mac", None)
@@ -112,7 +112,7 @@ class NamespaceNetworkInterface(GenericNode):
             ipv6_ra_file.write("0")
 
         # Drop into namespace
-        with NetNS(nsname=self.namespace.namespace):
+        with NetNS(nsname=self.namespace_node.namespace):
             # Write out DAD value
             with open(f"/proc/sys/net/ipv6/conf/{self.ifname}/accept_dad", "w") as ipv6_dad_file:
                 ipv6_dad_file.write(f"{self.ipv6_dad}")
@@ -210,9 +210,9 @@ class NamespaceNetworkInterface(GenericNode):
             self._ip_addresses.append(ip_address)
 
     @property
-    def namespace(self):
+    def namespace_node(self):
         """Return the namespace we're linked to."""
-        return self._namespace
+        return self._namespace_node
 
     @property
     def ifname(self):

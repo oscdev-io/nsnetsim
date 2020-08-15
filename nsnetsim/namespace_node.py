@@ -41,7 +41,7 @@ class NamespaceNode(GenericNode):
         """Initialize the object."""
 
         # Set the namespace name we're going to use
-        self._namespace = f"ns-{self._name}"
+        self._namespace = f"ns-{self.name}"
 
         # Start with a clean list of interfaces
         self._interfaces = []
@@ -98,11 +98,11 @@ class NamespaceNode(GenericNode):
         """Add network interface to namespace."""
 
         # Build options
-        args: Dict[str, Any] = {}
-        args["name"] = name
-        args["logger"] = self._logger
-        args["namespace"] = self
-        args["mac"] = mac
+        args: Dict[str, Any] = {
+            "name": name,
+            "namespace_node": self,
+            "mac": mac
+        }
 
         interface = NamespaceNetworkInterface(**args)
         self._interfaces.append(interface)
