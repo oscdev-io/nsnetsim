@@ -13,7 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# Portions of this file have been derived from python-netns, Copyright (C) 2017-2019, Lars Kellogg-Stedman.
+# Portions of this file have been derived from python-netns:
+# Copyright (C) 2017-2019, Lars Kellogg-Stedman.
 
 """Network namespace support."""
 
@@ -46,7 +47,8 @@ libc.setns.errcheck = errcheck
 
 
 def setns(filefd, nstype):
-    """Change the network namespace of the calling thread.
+    """
+    Change the network namespace of the calling thread.
 
     Given a file descriptor referring to a namespace, reassociate the
     calling thread with that namespace.  The fd argument may be either a
@@ -60,7 +62,8 @@ def setns(filefd, nstype):
 
 
 def get_ns_path(nspath: str = None, nsname: str = None, nspid: int = None):
-    """Generate a filesystem path from a namespace name or pid.
+    """
+    Generate a filesystem path from a namespace name or pid.
 
     Generate a filesystem path from a namespace name or pid, and return
     a filesystem path to the appropriate file.  Returns the nspath argument
@@ -73,13 +76,14 @@ def get_ns_path(nspath: str = None, nsname: str = None, nspid: int = None):
         nspath = "/proc/%d/ns/net" % nspid
 
     if (not nspath) or (not os.path.exists(nspath)):
-        raise ValueError("namespace path %s does not exist" % nspath)
+        raise ValueError(f"Namespace path '{nspath}' does not exist")
 
     return nspath
 
 
 class NetNS:
-    """A context manager for running code inside a network namespace.
+    """
+    A context manager for running code inside a network namespace.
 
     This is a context manager that on enter assigns the current process
     to an alternate network namespace (specified by name, filesystem path,
