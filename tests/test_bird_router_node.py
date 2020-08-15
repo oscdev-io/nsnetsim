@@ -5,6 +5,7 @@ import time
 
 from nsnetsim.topology import Topology
 from nsnetsim.bird_router_node import BirdRouterNode
+from nsnetsim.switch_node import SwitchNode
 
 
 class CustomPytestRegex:
@@ -31,14 +32,16 @@ class TestBirdRouterNode:
 
         topology = Topology()
 
-        router_x = topology.add_router("routerX", router_class=BirdRouterNode, configfile="tests/bird_router_node/routerX.conf")
+        router_x = BirdRouterNode("routerX", configfile="tests/bird_router_node/routerX.conf")
+        topology.add_node(router_x)
         router_x_eth0 = router_x.add_interface("eth0", mac="02:01:00:00:00:01")
         router_x_eth0.add_ip(["192.168.0.1/24", "fec0::1/64"])
 
-        switch_1 = topology.add_switch("switch1")
+        switch_1 = SwitchNode("switch1")
+        topology.add_node(switch_1)
         switch_1.add_interface(router_x_eth0)
 
-        topology.build()
+        topology.run()
 
         status_output = router_x.birdc_show_status()
 
@@ -52,21 +55,24 @@ class TestBirdRouterNode:
 
         topology = Topology()
 
-        router_x = topology.add_router("routerX", router_class=BirdRouterNode, configfile="tests/bird_router_node/routerX.conf")
+        router_x = BirdRouterNode("routerX", configfile="tests/bird_router_node/routerX.conf")
+        topology.add_node(router_x)
         router_x_eth0 = router_x.add_interface("eth0", mac="02:01:00:00:00:01")
         router_x_eth0.add_ip(["192.168.0.1/24", "fec0::1/64"])
         router_x_eth1 = router_x.add_interface("eth1", mac="02:01:01:00:00:01")
         router_x_eth1.add_ip(["192.168.10.1/24", "fec0:10::1/64"])
 
-        router_y = topology.add_router("routerY", router_class=BirdRouterNode, configfile="tests/bird_router_node/routerY.conf")
+        router_y = BirdRouterNode("routerY", configfile="tests/bird_router_node/routerY.conf")
+        topology.add_node(router_y)
         router_y_eth0 = router_y.add_interface("eth0", mac="02:02:00:00:00:01")
         router_y_eth0.add_ip(["192.168.0.2/24", "fec0::2/64"])
 
-        switch_1 = topology.add_switch("switch1")
+        switch_1 = SwitchNode("switch1")
+        topology.add_node(switch_1)
         switch_1.add_interface(router_x_eth0)
         switch_1.add_interface(router_y_eth0)
 
-        topology.build()
+        topology.run()
 
         protocols_output = router_x.birdc_show_protocols()
 

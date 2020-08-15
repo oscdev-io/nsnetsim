@@ -38,7 +38,7 @@ class Topology:
         self._nodes = []
         self._nodes_by_name = {}
 
-    def add_router(self, name: str, router_class: RouterNode = RouterNode, **kwargs) -> RouterNode:
+    def add_node(self, node: GenericNode):
         """Add a router to our topology."""
 
         node_type = type(node).__name__
@@ -49,12 +49,10 @@ class Topology:
         if node.name in self._nodes_by_name:
             raise RuntimeError(f'Router node "{node.name}" already exists')
 
-        self._nodes_by_name[name] = switch
-        self._nodes.append(switch)
+        self._nodes_by_name[node.name] = node
+        self._nodes.append(node)
 
-        return switch
-
-    def build(self):
+    def run(self):
         """Build our simulated network."""
 
         logging.info("Build and run a topology")
