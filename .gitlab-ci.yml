@@ -14,7 +14,7 @@ test_job:
   - pacman -S --noconfirm iproute2 bird exabgp
   # Create Python environment
   - pacman -S --noconfirm python-pip git
-  - pip install git+https://gitlab.devlabs.linuxassist.net/allworldit/python/birdclient.git
+  - pip install https://oscdev.io/software/birdclient.git
   # Run tests
   - python setup.py test
   # Artifacts
