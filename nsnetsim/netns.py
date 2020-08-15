@@ -23,19 +23,22 @@ import os
 #
 # Python doesn't expose the setns function, so we need to load it ourselves.
 #
-from ctypes import CDLL, get_errno
+import ctypes
+import ctypes.util
 
 # Constants we need
 CLONE_NEWNET = 0x40000000
 
-def errcheck(ret, func, args): # noqa
+
+def errcheck(ret, func, args):
     """Raise an OS error if something goes wrong."""
     if ret == -1:
-        error = get_errno()
+        error = ctypes.get_errno()
         raise OSError(error, os.strerror(error))
 
-libc = CDLL('libc.so.6', use_errno=True) # noqa
-libc.setns.errcheck = errcheck # noqa
+
+libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
+libc.setns.errcheck = errcheck
 
 #
 # End of importing of setns
