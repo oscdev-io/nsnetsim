@@ -15,6 +15,7 @@
 
 """Topology support."""
 
+import logging
 from typing import Dict, List, Optional
 
 from .generic_node import GenericNode
@@ -40,32 +41,13 @@ class Topology:
     def add_router(self, name: str, router_class: RouterNode = RouterNode, **kwargs) -> RouterNode:
         """Add a router to our topology."""
 
-        # Grab the router class name
-        router_class_name = type(router_class).__name__
-        self.log(f"Adding router: [{router_class_name}] {name}")
+        node_type = type(node).__name__
+
+        logging.info("Adding node: [%s] %s", node_type, node.name)
 
         # Check if router exists.. if so throw an error
-        if name in self._nodes_by_name:
-            raise RuntimeError(f'Router node "{name}" already exists')
-
-        # Instantiate it as an object
-        router = router_class(name, logger=self.log, **kwargs)
-
-        self._nodes_by_name[name] = router
-        self._nodes.append(router)
-
-        return router
-
-    def add_switch(self, name: str) -> SwitchNode:
-        """Add a switch to our topology."""
-
-        self.log(f"Adding switch: {name}")
-
-        # Check if router exists.. if so throw an error
-        if name in self._nodes_by_name:
-            raise RuntimeError(f'Switch node "{name}" already exists')
-
-        switch = SwitchNode(name, logger=self.log)
+        if node.name in self._nodes_by_name:
+            raise RuntimeError(f'Router node "{node.name}" already exists')
 
         self._nodes_by_name[name] = switch
         self._nodes.append(switch)
@@ -75,8 +57,8 @@ class Topology:
     def build(self):
         """Build our simulated network."""
 
-        self.log(f"Building topology")
-        # We need to create routers first
+        logging.info("Build and run a topology")
+        # We need to create routers first, so they're up before we plug them into switches
         for node in self._nodes:
             if isinstance(node, RouterNode):
                 node.create()
@@ -88,7 +70,7 @@ class Topology:
     def destroy(self):
         """Destroy our simulated network."""
 
-        self.log(f"Destroying topology")
+        logging.info("Destroying topology")
         # We need to remove routers first
         for node in self._nodes:
             if isinstance(node, RouterNode):
@@ -104,8 +86,3 @@ class Topology:
             return self._nodes_by_name[name]
         # Or None if not found
         return None
-
-    def log(self, msg: str):
-        """Log a message."""
-
-        print(f"LOG: {msg}")

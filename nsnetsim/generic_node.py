@@ -15,7 +15,7 @@
 
 """Generic node support."""
 
-from typing import Callable, Optional
+import logging
 
 
 class GenericNode:
@@ -23,19 +23,14 @@ class GenericNode:
 
     # Name of the node
     _name: str
-    # Logger
-    _logger: Optional[Callable[[str], None]]
     # Extra logging info
     _extra_log: str
 
-    def __init__(self, name, logger, **kwargs):
+    def __init__(self, name: str, **kwargs):
         """Initialize the object."""
 
         # Set the node name
         self._name = name
-
-        # Set the logger to use
-        self._logger = logger
 
         # Extra logging info
         self._extra_log = ""
@@ -73,12 +68,8 @@ class GenericNode:
         raise NotImplementedError("The _remove() method should be defined in the child class")
 
     def _log(self, msg: str):
-        """Log a message either using the logger provided or just using print."""
+        """Log a message."""
 
         node_type = type(self).__name__
-        newmsg = f"[{node_type}] {msg}"
 
-        if self._logger:
-            self._logger(newmsg)
-        else:
-            print(newmsg)
+        logging.info("[%s] %s", node_type, msg)
