@@ -4,7 +4,7 @@ import re
 from setuptools import find_packages, setup
 
 main_py = open('nsnetsim/__init__.py').read()
-metadata = dict(re.findall("__([A-Z]+)__ = '([^']+)'", main_py))
+metadata = dict(re.findall(r"__([A-Z]+)__ = ['\"]([^']+)['\"]", main_py))
 
 NAME = 'nsnetsim'
 VERSION = metadata['VERSION']

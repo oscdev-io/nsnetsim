@@ -91,24 +91,22 @@ class NetNS:
     namespace on exit.
     """
 
+    _mypath: str
+    _target_path: str
     # Our namespace handle
     _myns: str
 
     def __init__(self, nsname: str = None, nspath: str = "", nspid: int = None):
         """Initialize object."""
-
         # Grab paths
-        self.mypath = get_ns_path(nspid=os.getpid())
-        self.targetpath = get_ns_path(nspath=nspath, nsname=nsname, nspid=nspid)
-
-        if not self.targetpath:
-            raise ValueError("Invalid namespace")
+        self._mypath = get_ns_path(nspid=os.getpid())
+        self._target_path = get_ns_path(nspath=nspath, nsname=nsname, nspid=nspid)
 
     def __enter__(self):
         """Enter the namespace using with NetNS(...)."""
         # Save our current namespace, so we can jump back during __exit__
-        self._myns = open(self.mypath)
-        with open(self.targetpath) as filefd:
+        self._myns = open(self._mypath)
+        with open(self._target_path) as filefd:
             setns(filefd, CLONE_NEWNET)
 
     def __exit__(self, *args):
