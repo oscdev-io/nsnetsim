@@ -58,11 +58,11 @@ class NamespaceNetworkInterface(GenericNode):
         self._mac = kwargs.get("mac", None)
         if not self._mac:
             self._mac = "02:%02x:%02x:%02x:%02x:%02x" % (
-                random.randint(0, 255),
-                random.randint(0, 255),
-                random.randint(0, 255),
-                random.randint(0, 255),
-                random.randint(0, 255),
+                random.randint(0, 255),  # nosec
+                random.randint(0, 255),  # nosec
+                random.randint(0, 255),  # nosec
+                random.randint(0, 255),  # nosec
+                random.randint(0, 255),  # nosec
             )
 
         self._settings = {
