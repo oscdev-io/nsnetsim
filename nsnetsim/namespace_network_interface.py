@@ -19,7 +19,9 @@ import ipaddress
 import random
 import subprocess  # nosec
 import time
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .namespace_node import NamespaceNode
 
 from .generic_node import GenericNode
 from .netns import NetNS
@@ -29,7 +31,7 @@ class NamespaceNetworkInterface(GenericNode):
     """NamespaceInterface implements a network interface within a NamespaceNode."""
 
     # Namespace we're linked to
-    _namespace: object
+    _namespace_node: "NamespaceNode"
     # Name of the interfaces we've created
     _ifname_host: str
     # Interface mac address
