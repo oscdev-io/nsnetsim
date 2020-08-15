@@ -17,7 +17,7 @@
 
 import ipaddress
 import random
-import subprocess
+import subprocess  # nosec
 import time
 from typing import Any, Dict, List, Union
 
@@ -78,12 +78,26 @@ class NamespaceNetworkInterface(GenericNode):
         """Create the interface."""
 
         # Create the interface pair
-        subprocess.check_call(
-            ["ip", "link", "add", self.ifname_host, "link-netns", self.namespace.namespace, "type", "veth", "peer", self.ifname,]
+        subprocess.check_call(  # nosec
+            [
+                "/usr/bin/ip",
+                "link",
+                "add",
+                self.ifname_host,
+                "link-netns",
+                self.namespace_node.namespace,
+                "type",
+                "veth",
+                "peer",
+                self.ifname,
+            ]
         )
         # Set MAC address
-        res = self.namespace.run(
-            ["ip", "link", "set", self.ifname, "address", self._mac], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        res = self.namespace_node.run_in_ns(  # nosec
+            ["/usr/bin/ip", "link", "set", self.ifname, "address", self._mac],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
         )
         if res.returncode != 0:
             self._log(f'Failed to set MAC address for "{self.name}" interface "{self.ifname}": {res.stdout}')
@@ -107,7 +121,7 @@ class NamespaceNetworkInterface(GenericNode):
         # Add ip's to the namespace interface
         has_ipv6 = False
         for ip_address_raw in self.ip_addresses:
-            args = ["ip", "address", "add", ip_address_raw, "dev", self.ifname]
+            args = ["/usr/bin/ip", "address", "add", ip_address_raw, "dev", self.ifname]
 
             ip_address = ipaddress.ip_network(ip_address_raw, strict=False)
             # Check if we need to add a broadcast address for IPv4
@@ -117,7 +131,7 @@ class NamespaceNetworkInterface(GenericNode):
                 has_ipv6 = True
 
             # Set interface up on namespace side
-            res = self.namespace.run(args)
+            res = self.namespace_node.run_in_ns(args)
             if res.returncode != 0:
                 self._log(
                     f'Failed to add IP address for "{self.name}" interface "{self.ifname}" IP "{ip_address_raw}": '
@@ -125,9 +139,9 @@ class NamespaceNetworkInterface(GenericNode):
                 )
 
         # Set interface up on host side
-        subprocess.check_call(["ip", "link", "set", self.ifname_host, "up"])
+        subprocess.check_call(["/usr/bin/ip", "link", "set", self.ifname_host, "up"])  # nosec
         # Set interface up on namespace side
-        self.namespace.run(["ip", "link", "set", self.ifname, "up"])
+        self.namespace_node.run_in_ns(["/usr/bin/ip", "link", "set", self.ifname, "up"])
 
         # We need to wait until the interface IPv6 is up
         if has_ipv6:
@@ -137,8 +151,8 @@ class NamespaceNetworkInterface(GenericNode):
             while attempts > 0:
                 # We either need a site or global address
                 if not has_addr:
-                    result = self.namespace.run(
-                        ["ip", "-6", "-oneline", "address", "show", "dev", self.ifname, "scope", "site", "-tentative"],
+                    result = self.namespace_node.run_in_ns(
+                        ["/usr/bin/ip", "-6", "-oneline", "address", "show", "dev", self.ifname, "scope", "site", "-tentative"],
                         stdout=subprocess.PIPE,
                         text=True,
                     )
@@ -146,8 +160,8 @@ class NamespaceNetworkInterface(GenericNode):
                         has_addr = True
                         continue
 
-                    result = self.namespace.run(
-                        ["ip", "-6", "-oneline", "address", "show", "dev", self.ifname, "scope", "global", "-tentative"],
+                    result = self.namespace_node.run_in_ns(
+                        ["/usr/bin/ip", "-6", "-oneline", "address", "show", "dev", self.ifname, "scope", "global", "-tentative"],
                         stdout=subprocess.PIPE,
                         text=True,
                     )
@@ -156,8 +170,8 @@ class NamespaceNetworkInterface(GenericNode):
 
                 # We need a link local address not in the tentative state
                 if not has_ll6:
-                    result = self.namespace.run(
-                        ["ip", "-6", "-oneline", "address", "show", "dev", self.ifname, "scope", "link", "-tentative"],
+                    result = self.namespace_node.run_in_ns(
+                        ["/usr/bin/ip", "-6", "-oneline", "address", "show", "dev", self.ifname, "scope", "link", "-tentative"],
                         stdout=subprocess.PIPE,
                         text=True,
                     )
@@ -174,8 +188,8 @@ class NamespaceNetworkInterface(GenericNode):
 
             # Throw a runtime exception if we didn't manage to get a our addresses
             if attempts == 0:
-                result = self.namespace.run(
-                    ["ip", "-details", "-6", "address", "show", "dev", self.ifname], stdout=subprocess.PIPE, text=True,
+                result = self.namespace_node.run_in_ns(
+                    ["/usr/bin/ip", "-details", "-6", "address", "show", "dev", self.ifname], stdout=subprocess.PIPE, text=True,
                 )
 
                 raise RuntimeError(f"Failed to get IPv6 link-local address >> {result.stdout}")
@@ -184,7 +198,7 @@ class NamespaceNetworkInterface(GenericNode):
         """Remove the interface."""
 
         # Remove the interface
-        subprocess.check_call(["ip", "link", "del", self.ifname_host])
+        subprocess.check_call(["/usr/bin/ip", "link", "del", self.ifname_host])  # nosec
 
     def add_ip(self, ip_address: Union[str, list]):
         """Add IP to the namespace interface."""

@@ -18,7 +18,7 @@
 import getpass
 import os
 import signal
-import subprocess
+import subprocess  # nosec
 from typing import List
 
 from .router_node import RouterNode
@@ -61,14 +61,14 @@ class ExaBGPRouterNode(RouterNode):
     def exabgpcli(self, args: List[str]) -> List[str]:
         """Send a query to ExaBGP."""
 
-        cmdline = ["exabgpcli"]
+        cmdline = ["/usr/bin/exabgpcli"]
         cmdline.extend(args)
 
         # Now for the actual configuration, which is done using the environment
         environment = {}
         environment["exabgp.api.pipename"] = self._namedpipe
 
-        res = self.run(cmdline, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        res = self.run_in_ns(cmdline, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)  # nosec
         return res.stdout.decode("utf-8").splitlines()
 
     def _create(self):
@@ -78,7 +78,7 @@ class ExaBGPRouterNode(RouterNode):
         super()._create()
 
         # Work out the arguments we're going to pass
-        args = ["ip", "netns", "exec", self.namespace, "exabgp"]
+        args = ["/usr/bin/exabgp"]
         # If we were given a config file, add it
         if self._configfile:
             args.append(self._configfile)
@@ -93,14 +93,14 @@ class ExaBGPRouterNode(RouterNode):
         environment["exabgp.log.destination"] = self._logfile
 
         try:
-            subprocess.check_output(["mkfifo", self._fifo_in, self._fifo_out])
+            subprocess.check_output(["/usr/bin/mkfifo", self._fifo_in, self._fifo_out])  # nosec
         except subprocess.CalledProcessError as exception:
             output = exception.output.decode("utf-8").rstrip()
             self._log(f"ERROR: Failed to create ExaBGP fifo files: " f"{output}")
 
         # Run ExaBGP within the network namespace
         try:
-            subprocess.check_output(args, env=environment)
+            self.run_in_ns(args, env=environment)  # nosec
         except subprocess.CalledProcessError as exception:
             output = exception.output.decode("utf-8").rstrip()
             self._log(f'ERROR: Failed to start ExaBGP with configuration file "{self._configfile}": ' f"{output}")

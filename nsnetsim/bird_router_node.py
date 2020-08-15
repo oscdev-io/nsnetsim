@@ -17,7 +17,7 @@
 
 import os
 import signal
-import subprocess
+import subprocess  # nosec
 from typing import Any, Dict, List
 
 from birdclient import BirdClient
@@ -56,7 +56,7 @@ class BirdRouterNode(RouterNode):
 
         # Test config file
         try:
-            subprocess.check_output(["bird", "-c", self._configfile, "-p"], stderr=subprocess.STDOUT)
+            subprocess.check_output(["/usr/bin/bird", "-c", self._configfile, "-p"], stderr=subprocess.STDOUT)  # nosec
         except subprocess.CalledProcessError as exception:
             output = exception.output.decode("utf-8").rstrip()
             self._log(f'ERROR: Failed to validate BIRD configuration file "{self._configfile}": ' f"{output}")
@@ -94,9 +94,9 @@ class BirdRouterNode(RouterNode):
 
         # Run bird within the network namespace
         try:
-            subprocess.check_output(
+            subprocess.check_output(  # nosec
                 [
-                    "ip",
+                    "/usr/bin/ip",
                     "netns",
                     "exec",
                     self.namespace,

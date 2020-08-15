@@ -17,7 +17,7 @@
 
 import os
 import json
-import subprocess
+import subprocess  # nosec
 from typing import Any, Dict, List, Optional
 
 from .generic_node import GenericNode
@@ -58,10 +58,10 @@ class NamespaceNode(GenericNode):
         """Create the namespace."""
 
         # Create namespace
-        subprocess.check_call(["ip", "netns", "add", self.namespace])
+        subprocess.check_call(["/usr/bin/ip", "netns", "add", self.namespace])  # nosec
 
         # Bring the lo interface up
-        self.run(["ip", "link", "set", "lo", "up"])
+        self.run_in_ns(["/usr/bin/ip", "link", "set", "lo", "up"])
 
         # Create interfaces
         for interface in self._interfaces:
@@ -71,16 +71,16 @@ class NamespaceNode(GenericNode):
         # Drop into namespace
         with NetNS(nsname=self.namespace):
             # Enable forwarding
-            with open(f"/proc/sys/net/ipv4/conf/all/forwarding", "w") as forwarding_file:
+            with open("/proc/sys/net/ipv4/conf/all/forwarding", "w") as forwarding_file:
                 forwarding_file.write("1")
-            with open(f"/proc/sys/net/ipv6/conf/all/forwarding", "w") as forwarding_file:
+            with open("/proc/sys/net/ipv6/conf/all/forwarding", "w") as forwarding_file:
                 forwarding_file.write("1")
 
         # Add routes to the namespace
         for route in self._routes:
-            route_args = ["ip", "route", "add"]
+            route_args = ["/usr/bin/ip", "route", "add"]
             route_args.extend(route)
-            res = self.run(route_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            res = self.run_in_ns(route_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
             if res.returncode != 0:
                 self._log(f'Failed to run in "{self.name}": {res.stdout}')
 
@@ -92,7 +92,7 @@ class NamespaceNode(GenericNode):
             interface.remove()
 
         # Remove the namespace
-        subprocess.check_call(["ip", "netns", "del", self.namespace])
+        subprocess.check_call(["/usr/bin/ip", "netns", "del", self.namespace])  # nosec
 
     def add_interface(self, name: str, mac: Optional[str] = None) -> NamespaceNetworkInterface:
         """Add network interface to namespace."""
@@ -113,25 +113,25 @@ class NamespaceNode(GenericNode):
         """Add route to the namespace."""
         self._routes.append(route)
 
-    def run(self, args, **kwargs) -> Any:
+    def run_in_ns(self, args, **kwargs) -> Any:
         """Run command inside the namespace."""
 
         # Build command to execute
-        cmd_args = ["ip", "netns", "exec", self.namespace]
+        cmd_args = ["/usr/bin/ip", "netns", "exec", self.namespace]
         cmd_args.extend(args)
 
         # Run command
-        return subprocess.run(cmd_args, **kwargs)
+        return subprocess.run(cmd_args, **kwargs)  # nosec
 
     def run_ip(self, args: List[str]) -> Any:
         """Run the 'ip' tool and decode its return output."""
         # Run the IP tool with JSON output
-        cmd_args = ["ip", "--json"]
+        cmd_args = ["/usr/bin/ip", "--json"]
         # Add our args
         cmd_args.extend(args)
 
         # Grab result from process execution
-        result = self.run(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        result = self.run_in_ns(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
         # Return the decoded json output
         return json.loads(result.stdout)
