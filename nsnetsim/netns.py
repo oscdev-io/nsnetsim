@@ -19,34 +19,26 @@
 """Network namespace support."""
 
 import os
-
+from typing import IO, Union
 
 #
 # Python doesn't expose the setns function, so we need to load it ourselves.
 #
+
 import ctypes
 import ctypes.util
 
 # Constants we need
 CLONE_NEWNET = 0x40000000
 
-
-def errcheck(ret, func, args):
-    """Raise an OS error if something goes wrong."""
-    if ret == -1:
-        error = ctypes.get_errno()
-        raise OSError(error, os.strerror(error))
-
-
 libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
-libc.setns.errcheck = errcheck
 
 #
 # End of importing of setns
 #
 
 
-def setns(filefd, nstype):
+def setns(handle: Union[IO, int], nstype: int) -> int:
     """
     Change the network namespace of the calling thread.
 
@@ -55,10 +47,20 @@ def setns(filefd, nstype):
     numeric file  descriptor or a Python object with a fileno() method.
     """
 
-    if hasattr(filefd, "fileno"):
-        filefd = filefd.fileno()
+    if isinstance(handle, int):
+        filefd = handle
+    elif hasattr(handle, "fileno"):
+        filefd = handle.fileno()
+    else:
+        raise TypeError("The 'handle' parameter must either be a file object or file descriptor")
 
-    return libc.setns(filefd, nstype)
+    ret = libc.setns(filefd, nstype)
+
+    if ret == -1:
+        error = ctypes.get_errno()
+        raise OSError(error, os.strerror(error))
+
+    return ret
 
 
 def get_ns_path(nspath: str = None, nsname: str = None, nspid: int = None):
