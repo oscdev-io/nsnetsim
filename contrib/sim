@@ -1,5 +1,8 @@
 #!/usr/bin/python
-# Copyright (C) 2019, AllWorldIT.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Copyright (C) 2019-2020, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -131,7 +134,7 @@ def stop(configfile: str):
 def cmdline():
     """Process command line arguments."""
 
-    print(f'nsNetSim v{__version__} - Copyright © 2019, AllWorldIT.\n')
+    print(f'nsNetSim v{__version__} - Copyright © 2019-2020, AllWorldIT.\n')
 
 # Start argument parser
     argparser = argparse.ArgumentParser(add_help=False)
