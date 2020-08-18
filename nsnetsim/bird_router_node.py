@@ -74,7 +74,7 @@ class BirdRouterNode(RouterNode):
         try:
             return birdc.query(query)
         except BirdClientError as err:
-            raise NsNetSimError(f"BIRD client error: {err}") from err
+            raise NsNetSimError(f"{err}") from err
 
     def birdc_show_status(self) -> Dict[str, str]:
         """Return status."""
@@ -82,7 +82,7 @@ class BirdRouterNode(RouterNode):
         try:
             return birdc.show_status()
         except BirdClientError as err:
-            raise NsNetSimError(f"BIRD client error: {err}") from err
+            raise NsNetSimError(f"{err}") from err
 
     def birdc_show_protocols(self) -> Dict[str, Any]:
         """Return protocols."""
@@ -90,7 +90,7 @@ class BirdRouterNode(RouterNode):
         try:
             return birdc.show_protocols()
         except BirdClientError as err:
-            raise NsNetSimError(f"BIRD client error: {err}") from err
+            raise NsNetSimError(f"{err}") from err
 
     def birdc_show_route_table(self, table: str) -> List:
         """Return a routing table."""
@@ -98,7 +98,7 @@ class BirdRouterNode(RouterNode):
         try:
             return birdc.show_route_table(table)
         except BirdClientError as err:
-            raise NsNetSimError(f"BIRD client error: {err}") from err
+            raise NsNetSimError(f"{err}") from err
 
     def _create(self):
         """Create the router."""
