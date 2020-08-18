@@ -21,13 +21,13 @@
 
 import argparse
 import configparser
-import os
-import sys
-
-sys.path.insert(0, '%s/src' % os.path.dirname(os.path.abspath(__file__)))
+from typing import Optional
 
 from nsnetsim.topology import Topology
+from nsnetsim.generic_node import GenericNode
 from nsnetsim.bird_router_node import BirdRouterNode
+from nsnetsim.router_node import RouterNode
+from nsnetsim.switch_node import SwitchNode
 
 __version__ = '0.0.1'
 
@@ -41,6 +41,8 @@ def _load_topology(configfile: str) -> Topology:
     topology = Topology()
 
     for section in config.sections():
+        router: Optional[GenericNode]
+
         # Split the section name up into its components
         (node_type, router_name, arg) = section.split()
 
@@ -54,20 +56,18 @@ def _load_topology(configfile: str) -> Topology:
             if not arg:
                 raise RuntimeError('To define a router you need to add a type "[router ROUTER_NAME ROUTER_TYPE]"')
 
+            # Grab config file
+            if 'configfile' not in config[section]:
+                raise RuntimeError(f"No configuration file for section '{section}'")
+
             # Check the router type is supported
             if arg == 'BirdRouterNode':
-                router_type = BirdRouterNode
+                router = BirdRouterNode(router_name, configfile=config[section]["configfile"])
             else:
                 raise RuntimeError('Router type "{arg}" not supported?')
 
-            # Grab config file
-            configfile = None
-            if 'configfile' in config[section]:
-                configfile = config[section]['configfile']
-
             # Add the router
-            router = topology.add_router(router_name, router_class=router_type,
-                                         configfile=configfile)
+            topology.add_node(router)
 
             # Grab routes we may have and add them
             if 'routes' in config[section]:
@@ -84,7 +84,9 @@ def _load_topology(configfile: str) -> Topology:
             # Try get node
             router = topology.get_node(router_name)
             if not router:
-                raise RuntimeError(f'Router node "{router_name}" not found')
+                raise RuntimeError(f"Router node '{router_name}' not found")
+            if not isinstance(router, RouterNode):
+                raise RuntimeError(f"Router node '{router_name}' is not a RouterNode")
 
             # Work out MAC address
             mac = None
@@ -101,7 +103,10 @@ def _load_topology(configfile: str) -> Topology:
                 switch = topology.get_node(switch_name)
                 # If we didn't get one, create it
                 if not switch:
-                    switch = topology.add_switch(switch_name)
+                    switch = SwitchNode(switch_name)
+                    topology.add_node(switch)
+                elif not isinstance(switch, SwitchNode):
+                    raise RuntimeError(f"Switch node '{switch_name}' is not a SwitchNode")
                 # Add the interface to the switch...
                 switch.add_interface(interface)
 
@@ -122,7 +127,7 @@ def _load_topology(configfile: str) -> Topology:
 def start(configfile: str):
     """Start the simulation."""
     topology = _load_topology(configfile)
-    topology.build()
+    topology.run()
 
 
 def stop(configfile: str):
@@ -153,7 +158,7 @@ def cmdline():
     args = argparser.parse_args()
 
     if not args.cmd:
-        print(f'ERROR: No command given')
+        print('ERROR: No command given')
         exit(1)
 
     if args.cmd in ('start', 'stop'):
@@ -169,7 +174,6 @@ def cmdline():
 
     elif args.cmd == 'stop':
         stop(args.configfile)
-
 
 
 if __name__ == '__main__':
