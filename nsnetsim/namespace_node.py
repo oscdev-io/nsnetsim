@@ -130,11 +130,7 @@ class NamespaceNode(GenericNode):
         """Add network interface to namespace."""
 
         # Build options
-        args: Dict[str, Any] = {
-            "name": name,
-            "namespace_node": self,
-            "mac": mac
-        }
+        args: Dict[str, Any] = {"name": name, "namespace_node": self, "mac": mac}
 
         interface = NamespaceNetworkInterface(**args)
         self._interfaces.append(interface)
