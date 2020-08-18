@@ -23,9 +23,11 @@ import random
 import subprocess  # nosec
 import time
 from typing import Any, Dict, List, Union, TYPE_CHECKING
+
 if TYPE_CHECKING:
     from .namespace_node import NamespaceNode
 
+from .exceptions import NsNetSimError
 from .generic_node import GenericNode
 from .netns import NetNS
 
@@ -42,6 +44,8 @@ class NamespaceNetworkInterface(GenericNode):
     _settings: Dict[str, Any]
     # IP's for interface
     _ip_addresses: List[str]
+    # Indication if the interface was created
+    _created: bool
 
     def _init(self, **kwargs):
         """Initialize the object."""
@@ -49,7 +53,7 @@ class NamespaceNetworkInterface(GenericNode):
         # Make sure we have an namespace
         self._namespace_node = kwargs.get("namespace_node", None)
         if not self._namespace_node:
-            raise RuntimeError('The argument "namespace_node" should of been specified')
+            raise NsNetSimError('The argument "namespace_node" should of been specified')
 
         # Set the namespace name we're going to use
         self._ifname_host = f"{self.namespace_node.name}-{self.name}"
@@ -78,50 +82,69 @@ class NamespaceNetworkInterface(GenericNode):
         # Start with a clean list of IP's
         self._ip_addresses = []
 
+        # Indicate the interface has not yet been created
+        self._created = False
+
     # pylama: ignore=C901,R0912
     def _create(self):
         """Create the interface."""
 
         # Create the interface pair
-        subprocess.check_call(  # nosec
-            [
-                "/usr/bin/ip",
-                "link",
-                "add",
-                self.ifname_host,
-                "link-netns",
-                self.namespace_node.namespace,
-                "type",
-                "veth",
-                "peer",
-                self.ifname,
-            ]
-        )
+        try:
+            self.run_check_call(
+                [
+                    "/usr/bin/ip",
+                    "link",
+                    "add",
+                    self.ifname_host,
+                    "link-netns",
+                    self.namespace_node.namespace,
+                    "type",
+                    "veth",
+                    "peer",
+                    self.ifname,
+                ]
+            )
+        except subprocess.CalledProcessError as err:
+            raise NsNetSimError(
+                f"Failed to create veth {self.ifname_host} => {self.ifname} [{self.namespace_node.namespace}]: {err.stdout}"
+            ) from None
+        # Indicate the interface has been created
+        self._created = True
+
         # Set MAC address
-        res = self.namespace_node.run_in_ns(  # nosec
-            ["/usr/bin/ip", "link", "set", self.ifname, "address", self._mac],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
-        if res.returncode != 0:
-            self._log(f'Failed to set MAC address for "{self.name}" interface "{self.ifname}": {res.stdout}')
+        try:
+            self.namespace_node.run_in_ns_check_call(["/usr/bin/ip", "link", "set", self.ifname, "address", self._mac])
+        except subprocess.CalledProcessError as err:
+            raise NsNetSimError(f'Failed to set MAC address for "{self.name}" interface "{self.ifname}": {err.stdout}') from None
 
         # Disable host IPv6 DAD
-        with open(f"/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_dad", "w") as ipv6_dad_file:
-            ipv6_dad_file.write("0")
+        try:
+            with open(f"/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_dad", "w") as ipv6_dad_file:
+                ipv6_dad_file.write("0")
+        except OSError as err:
+            raise NsNetSimError(f"Failed to set host 'accept_dad' to 0: {err}") from None
         # Disable host IPv6 RA
-        with open(f"/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_ra", "w") as ipv6_ra_file:
-            ipv6_ra_file.write("0")
+        try:
+            with open(f"/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_ra", "w") as ipv6_ra_file:
+                ipv6_ra_file.write("0")
+        except OSError as err:
+            raise NsNetSimError(f"Failed to set host 'accept_ra' to 0: {err}") from None
 
         # Drop into namespace
         with NetNS(nsname=self.namespace_node.namespace):
-            # Write out DAD value
-            with open(f"/proc/sys/net/ipv6/conf/{self.ifname}/accept_dad", "w") as ipv6_dad_file:
-                ipv6_dad_file.write(f"{self.ipv6_dad}")
-            # Write out RA value
-            with open(f"/proc/sys/net/ipv6/conf/{self.ifname}/accept_ra", "w") as ipv6_ra_file:
-                ipv6_ra_file.write(f"{self.ipv6_ra}")
+            # Disable namespace IPv6 DAD
+            try:
+                with open(f"/proc/sys/net/ipv6/conf/{self.ifname}/accept_dad", "w") as ipv6_dad_file:
+                    ipv6_dad_file.write(f"{self.ipv6_dad}")
+            except OSError as err:
+                raise NsNetSimError(f"Failed to set namespace 'accept_dad' to 0: {err}") from None
+            # Disable namespace IPv6 RA
+            try:
+                with open(f"/proc/sys/net/ipv6/conf/{self.ifname}/accept_ra", "w") as ipv6_ra_file:
+                    ipv6_ra_file.write(f"{self.ipv6_ra}")
+            except OSError as err:
+                raise NsNetSimError(f"Failed to set namespace 'accept_dad' to 0: {err}") from None
 
         # Add ip's to the namespace interface
         has_ipv6 = False
@@ -136,17 +159,23 @@ class NamespaceNetworkInterface(GenericNode):
                 has_ipv6 = True
 
             # Set interface up on namespace side
-            res = self.namespace_node.run_in_ns(args)
-            if res.returncode != 0:
-                self._log(
-                    f'Failed to add IP address for "{self.name}" interface "{self.ifname}" IP "{ip_address_raw}": '
-                    + f"{res.stdout}"
-                )
+            try:
+                self.namespace_node.run_in_ns_check_call(args)
+            except subprocess.CalledProcessError as err:
+                raise NsNetSimError(
+                    f"Failed to add IP address for '{self.name}'' interface '{self.ifname}' IP '{ip_address_raw}': {err.stdout}"
+                ) from None
 
         # Set interface up on host side
-        subprocess.check_call(["/usr/bin/ip", "link", "set", self.ifname_host, "up"])  # nosec
+        try:
+            self.run_check_call(["/usr/bin/ip", "link", "set", self.ifname_host, "up"])
+        except subprocess.CalledProcessError as err:
+            raise NsNetSimError(f"Failed to set host interface '{self.ifname_host}' up: {err.stdout}") from None
         # Set interface up on namespace side
-        self.namespace_node.run_in_ns(["/usr/bin/ip", "link", "set", self.ifname, "up"])
+        try:
+            self.namespace_node.run_in_ns_check_call(["/usr/bin/ip", "link", "set", self.ifname, "up"])
+        except subprocess.CalledProcessError as err:
+            raise NsNetSimError(f"Failed to set namespace interface '{self.ifname}' up: {err.stdout}") from None
 
         # We need to wait until the interface IPv6 is up
         if has_ipv6:
@@ -156,30 +185,47 @@ class NamespaceNetworkInterface(GenericNode):
             while attempts > 0:
                 # We either need a site or global address
                 if not has_addr:
-                    result = self.namespace_node.run_in_ns(
-                        ["/usr/bin/ip", "-6", "-oneline", "address", "show", "dev", self.ifname, "scope", "site", "-tentative"],
-                        stdout=subprocess.PIPE,
-                        text=True,
-                    )
+                    try:
+                        result = self.namespace_node.run_in_ns_check_output(
+                            ["/usr/bin/ip", "-6", "-oneline", "address", "show", "dev", self.ifname, "scope", "site", "-tentative"],
+                        )
+                    except subprocess.CalledProcessError as err:
+                        raise NsNetSimError(f"Failed to get site scoped tentative addresses: {err.stderr}") from None
+                    # Check if we have output
                     if result.stdout:
                         has_addr = True
                         continue
 
-                    result = self.namespace_node.run_in_ns(
-                        ["/usr/bin/ip", "-6", "-oneline", "address", "show", "dev", self.ifname, "scope", "global", "-tentative"],
-                        stdout=subprocess.PIPE,
-                        text=True,
-                    )
+                    try:
+                        result = self.namespace_node.run_in_ns_check_output(
+                            [
+                                "/usr/bin/ip",
+                                "-6",
+                                "-oneline",
+                                "address",
+                                "show",
+                                "dev",
+                                self.ifname,
+                                "scope",
+                                "global",
+                                "-tentative",
+                            ],
+                        )
+                    except subprocess.CalledProcessError as err:
+                        raise NsNetSimError(f"Failed to get global scoped tentative addresses: {err.stderr}") from None
+                    # Check if we have output
                     if result.stdout:
                         has_addr = True
 
                 # We need a link local address not in the tentative state
                 if not has_ll6:
-                    result = self.namespace_node.run_in_ns(
-                        ["/usr/bin/ip", "-6", "-oneline", "address", "show", "dev", self.ifname, "scope", "link", "-tentative"],
-                        stdout=subprocess.PIPE,
-                        text=True,
-                    )
+                    try:
+                        result = self.namespace_node.run_in_ns_check_output(
+                            ["/usr/bin/ip", "-6", "-oneline", "address", "show", "dev", self.ifname, "scope", "link", "-tentative"]
+                        )
+                    except subprocess.CalledProcessError as err:
+                        raise NsNetSimError(f"Failed to get link scoped tentative addresses: {err.stderr}") from None
+                    # Check if we have output
                     if result.stdout:
                         has_ll6 = True
 
@@ -193,17 +239,30 @@ class NamespaceNetworkInterface(GenericNode):
 
             # Throw a runtime exception if we didn't manage to get a our addresses
             if attempts == 0:
-                result = self.namespace_node.run_in_ns(
-                    ["/usr/bin/ip", "-details", "-6", "address", "show", "dev", self.ifname], stdout=subprocess.PIPE, text=True,
-                )
+                try:
+                    result = self.namespace_node.run_in_ns_check_call(
+                        ["/usr/bin/ip", "-details", "-6", "address", "show", "dev", self.ifname]
+                    )
+                except subprocess.CalledProcessError as err:
+                    raise NsNetSimError(
+                        f"Failed to get IPv6 adresses in namespace '{self.namespace_node.namespace}': {err.stdout}"
+                    ) from None
 
-                raise RuntimeError(f"Failed to get IPv6 link-local address >> {result.stdout}")
+                raise NsNetSimError(
+                    f"Failed to get IPv6 link-local address in namespace '{self.namespace_node.namespace}': {result.stdout}"
+                )
 
     def _remove(self):
         """Remove the interface."""
 
         # Remove the interface
-        subprocess.check_call(["/usr/bin/ip", "link", "del", self.ifname_host])  # nosec
+        if self._created:
+            try:
+                self.run_check_call(["/usr/bin/ip", "link", "del", self.ifname_host])
+            except subprocess.CalledProcessError as err:
+                raise NsNetSimError(f"Failed to remove veth '{self.ifname_host}' from host: {err.stdout}") from None
+            # Indicate that the interface is no longer created
+            self._created = False
 
     def add_ip(self, ip_address: Union[str, list]):
         """Add IP to the namespace interface."""

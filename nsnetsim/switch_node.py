@@ -22,6 +22,7 @@ import subprocess  # nosec
 from typing import List
 
 from .generic_node import GenericNode
+from .exceptions import NsNetSimError
 from .namespace_network_interface import NamespaceNetworkInterface
 
 
@@ -32,6 +33,8 @@ class SwitchNode(GenericNode):
     _bridge_name: str
     # Interfaces added to this switch
     _interfaces: List[NamespaceNetworkInterface]
+    # Created flag
+    _created: bool
 
     def _init(self, **kwargs):
         """Initialize the object."""
@@ -44,24 +47,44 @@ class SwitchNode(GenericNode):
         # Start out with no interfaces added to this switch\
         self._interfaces = []
 
+        # Indicator that the bridge interface was created
+        self._created = False
+
     def _create(self):
         """Create the switch."""
 
-        subprocess.check_call(["/usr/bin/ip", "link", "add", self.bridge_name, "type", "bridge", "forward_delay", "0"])  # nosec
-        subprocess.check_call(["/usr/bin/ip", "link", "set", self.bridge_name, "up"])  # nosec
+        try:
+            self.run_check_call(["/usr/bin/ip", "link", "add", self.bridge_name, "type", "bridge", "forward_delay", "0"])
+        except subprocess.CalledProcessError as err:
+            raise NsNetSimError(f"Failed to add bridge '{self.bridge_name}' to host: {err.stdout}") from None
+        # Indicate that the bridge was created
+        self._created = True
+
+        try:
+            self.run_check_call(["/usr/bin/ip", "link", "set", self.bridge_name, "up"])
+        except subprocess.CalledProcessError as err:
+            raise NsNetSimError(f"Failed to set bridge '{self.bridge_name}' up: {err.stdout}") from None
 
         # Add interfaces to the bridge by setting the bridge as the interface master
         for interface in self.interfaces:
-            self._log(f'Adding interface "{interface.name}" from "{interface.namespace.name}" ' f'to switch "{self.name}"')
-            subprocess.check_call(["/usr/bin/ip", "link", "set", interface.ifname_host, "master", self.bridge_name])  # nosec
+            self._log(f"Adding interface '{interface.name}' from '{interface.namespace_node.name}' to switch '{self.name}'")
+            try:
+                self.run_check_call(["/usr/bin/ip", "link", "set", interface.ifname_host, "master", self.bridge_name])
+            except subprocess.CalledProcessError as err:
+                raise NsNetSimError(
+                    f"Failed to set master for '{interface.ifname_host}' to '{self.bridge_name}': {err.stdout}"
+                ) from None
 
     def _remove(self):
         """Remove the namespace."""
 
-        try:
-            subprocess.check_call(["/usr/bin/ip", "link", "del", self.bridge_name])  # nosec
-        except subprocess.CalledProcessError:
-            self._log(f'WARNING: Failed to remove switch "{self.bridge_name}"')
+        if self._created:
+            try:
+                self.run_check_call(["/usr/bin/ip", "link", "del", self.bridge_name])
+            except subprocess.CalledProcessError as err:
+                raise NsNetSimError(f"Failed to remove host bridge '{self.bridge_name}': {err.stdout}")
+            # Flip flag to indicate that the bridge is no longer created
+            self._created = False
 
     def add_interface(self, interface: NamespaceNetworkInterface):
         """Add an interface to this switch."""

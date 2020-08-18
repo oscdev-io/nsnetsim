@@ -19,6 +19,7 @@
 """Generic node support."""
 
 import logging
+import subprocess  # nosec
 
 
 class GenericNode:
@@ -53,6 +54,14 @@ class GenericNode:
         self._log(f'Removing "{self.name}"{self._extra_log}')
         self._remove()
 
+    def run_check_call(self, args, **kwargs) -> subprocess.CompletedProcess:
+        """Run command inside the namespace similar to check_call."""
+        return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True, text=True, **kwargs)  # nosec
+
+    def run_check_output(self, args, **kwargs) -> subprocess.CompletedProcess:
+        """Run command inside the namespace similar to check_call."""
+        return subprocess.run(args, capture_output=True, check=True, text=True, **kwargs)  # nosec
+
     @property
     def name(self):
         """Return the node name."""
@@ -76,3 +85,10 @@ class GenericNode:
         node_type = type(self).__name__
 
         logging.info("[%s] %s", node_type, msg)
+
+    def _log_warning(self, msg: str):
+        """Log a message."""
+
+        node_type = type(self).__name__
+
+        logging.warning("[%s] %s", node_type, msg)

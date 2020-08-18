@@ -22,8 +22,9 @@ import getpass
 import os
 import signal
 import subprocess  # nosec
-from typing import List
+from typing import List, Optional
 
+from .exceptions import NsNetSimError
 from .router_node import RouterNode
 
 
@@ -36,6 +37,13 @@ class ExaBGPRouterNode(RouterNode):
     _namedpipe: str
     # PID file
     _pidfile: str
+    # Pipes
+    _fifo_in: str
+    _fifo_out: str
+    # Log file
+    _logfile: str
+    # ExaBGP process
+    _exabgp_process: Optional[subprocess.CompletedProcess]
 
     def _init(self, **kwargs):
         """Initialize the object."""
@@ -47,16 +55,16 @@ class ExaBGPRouterNode(RouterNode):
         configfile = kwargs.get("configfile", None)
         # Check it exists
         if configfile and (not os.path.exists(configfile)):
-            raise RuntimeError(f'ExaBGP config file "{configfile}" does not exist')
+            raise NsNetSimError(f'ExaBGP config file "{configfile}" does not exist')
         # Set config file
         self._configfile = configfile
 
         # Set named pipe
         self._namedpipe = f"exabgp-{self._name}"
         self._pidfile = f"{self._rundir}/exabgp-{self._name}.pid"
-        self._fifo_in = f"/run/{self._namedpipe}.in"
-        self._fifo_out = f"/run/{self._namedpipe}.out"
-        self._logfile = f"{self._namedpipe}.log"
+        self._fifo_in = f"{self._rundir}/exabgp-{self._name}.in"
+        self._fifo_out = f"{self._rundir}/exabgp-{self._name}.out"
+        self._logfile = f"{self._rundir}/exabgp-{self._name}.log"
 
         # We start out with no process
         self._exabgp_process = None
@@ -71,8 +79,12 @@ class ExaBGPRouterNode(RouterNode):
         environment = {}
         environment["exabgp.api.pipename"] = self._namedpipe
 
-        res = self.run_in_ns(cmdline, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)  # nosec
-        return res.stdout.decode("utf-8").splitlines()
+        try:
+            res = self.run_in_ns_check_output(cmdline, env=environment)
+        except subprocess.CalledProcessError as err:
+            raise NsNetSimError(f"Failed to run ExaBGP command {cmdline}: {err.stderr}") from None
+
+        return res.stdout.splitlines()
 
     def _create(self):
         """Create the router."""
@@ -96,30 +108,31 @@ class ExaBGPRouterNode(RouterNode):
         environment["exabgp.log.destination"] = self._logfile
 
         try:
-            subprocess.check_output(["/usr/bin/mkfifo", self._fifo_in, self._fifo_out])  # nosec
-        except subprocess.CalledProcessError as exception:
-            output = exception.output.decode("utf-8").rstrip()
-            self._log(f"ERROR: Failed to create ExaBGP fifo files: " f"{output}")
+            self.run_check_call(["/usr/bin/mkfifo", self._fifo_in, self._fifo_out])
+        except subprocess.CalledProcessError as err:
+            raise NsNetSimError(f"Failed to create ExaBGP fifo files: {err.stdout}")
 
         # Run ExaBGP within the network namespace
         try:
-            self.run_in_ns(args, env=environment)  # nosec
-        except subprocess.CalledProcessError as exception:
-            output = exception.output.decode("utf-8").rstrip()
-            self._log(f'ERROR: Failed to start ExaBGP with configuration file "{self._configfile}": ' f"{output}")
+            self.run_in_ns_check_call(args, env=environment)
+        except subprocess.CalledProcessError as err:
+            raise NsNetSimError(f"Failed to start ExaBGP with configuration file '{self._configfile}': {err.stdout}")
 
     def _remove(self):
         """Remove the router."""
 
         # Grab PID of the process...
         if os.path.exists(self._pidfile):
-            with open(self._pidfile, "r") as pidfile_file:
-                pid = int(pidfile_file.read())
+            try:
+                with open(self._pidfile, "r") as pidfile_file:
+                    pid = int(pidfile_file.read())
+            except OSError as err:
+                raise NsNetSimError(f"Failed to open PID file '{self._pidfile}' for writing: {err}")
             # Terminate process
             try:
                 os.kill(pid, signal.SIGTERM)
             except ProcessLookupError:
-                self._log(f"WARNING: Failed to kill ExaBGP process {pid}")
+                self._log_warning(f"Failed to kill ExaBGP process PID {pid}")
             # Remove pid file
             try:
                 os.remove(self._pidfile)

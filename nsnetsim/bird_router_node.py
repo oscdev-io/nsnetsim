@@ -23,7 +23,8 @@ import signal
 import subprocess  # nosec
 from typing import Any, Dict, List
 
-from birdclient import BirdClient
+from birdclient import BirdClient, BirdClientError
+from .exceptions import NsNetSimError
 from .router_node import RouterNode
 
 
@@ -46,10 +47,10 @@ class BirdRouterNode(RouterNode):
         # We should be getting a config file
         configfile = kwargs.get("configfile", None)
         if not configfile:
-            raise RuntimeError('The "configfile" argument should of been provided')
+            raise NsNetSimError('The "configfile" argument should of been provided')
         # Check it exists
         if not os.path.exists(configfile):
-            raise RuntimeError(f'BIRD config file "{configfile}" does not exist')
+            raise NsNetSimError(f'BIRD config file "{configfile}" does not exist')
         # Set config file
         self._configfile = configfile
 
@@ -59,11 +60,9 @@ class BirdRouterNode(RouterNode):
 
         # Test config file
         try:
-            subprocess.check_output(["/usr/bin/bird", "-c", self._configfile, "-p"], stderr=subprocess.STDOUT)  # nosec
-        except subprocess.CalledProcessError as exception:
-            output = exception.output.decode("utf-8").rstrip()
-            self._log(f'ERROR: Failed to validate BIRD configuration file "{self._configfile}": ' f"{output}")
-            exit(1)
+            self.run_check_call(["/usr/bin/bird", "-c", self._configfile, "-p"])  # nosec
+        except subprocess.CalledProcessError as err:
+            raise NsNetSimError(f"Failed to validate BIRD config file '{self._configfile}': {err.stdout}") from None
 
         # We start out with no process
         self._bird_process = None
@@ -72,22 +71,34 @@ class BirdRouterNode(RouterNode):
     def birdc(self, query: str) -> List[str]:
         """Send a query to birdc."""
         birdc = BirdClient(self._controlsocket)
-        return birdc.query(query)
+        try:
+            return birdc.query(query)
+        except BirdClientError as err:
+            raise NsNetSimError(f"BIRD client error: {err}") from err
 
     def birdc_show_status(self) -> Dict[str, str]:
         """Return status."""
         birdc = BirdClient(self._controlsocket)
-        return birdc.show_status()
+        try:
+            return birdc.show_status()
+        except BirdClientError as err:
+            raise NsNetSimError(f"BIRD client error: {err}") from err
 
     def birdc_show_protocols(self) -> Dict[str, Any]:
         """Return protocols."""
         birdc = BirdClient(self._controlsocket)
-        return birdc.show_protocols()
+        try:
+            return birdc.show_protocols()
+        except BirdClientError as err:
+            raise NsNetSimError(f"BIRD client error: {err}") from err
 
     def birdc_show_route_table(self, table: str) -> List:
         """Return a routing table."""
         birdc = BirdClient(self._controlsocket)
-        return birdc.show_route_table(table)
+        try:
+            return birdc.show_route_table(table)
+        except BirdClientError as err:
+            raise NsNetSimError(f"BIRD client error: {err}") from err
 
     def _create(self):
         """Create the router."""
@@ -97,38 +108,27 @@ class BirdRouterNode(RouterNode):
 
         # Run bird within the network namespace
         try:
-            subprocess.check_output(  # nosec
-                [
-                    "/usr/bin/ip",
-                    "netns",
-                    "exec",
-                    self.namespace,
-                    "bird",
-                    "-c",
-                    self._configfile,
-                    "-s",
-                    self._controlsocket,
-                    "-P",
-                    self._pidfile,
-                ]
+            self.run_in_ns_check_call(
+                ["bird", "-c", self._configfile, "-s", self._controlsocket, "-P", self._pidfile,]
             )
-        except subprocess.CalledProcessError as exception:
-            output = exception.output.decode("utf-8").rstrip()
-            self._log(f'ERROR: Failed to start BIRD with configuration file "{self._configfile}": ' f"{output}")
-            exit(1)
+        except subprocess.CalledProcessError as err:
+            raise NsNetSimError(f"Failed to start BIRD with configuration file '{self._configfile}': {err.stdout}") from None
 
     def _remove(self):
         """Remove the router."""
 
         # Grab PID of the process...
         if os.path.exists(self._pidfile):
-            with open(self._pidfile, "r") as pidfile_file:
-                pid = int(pidfile_file.read())
+            try:
+                with open(self._pidfile, "r") as pidfile_file:
+                    pid = int(pidfile_file.read())
+            except OSError as err:
+                raise NsNetSimError(f"Failed to open PID file '{self._pidfile}' for writing: {err}")
             # Terminate process
             try:
                 os.kill(pid, signal.SIGTERM)
             except ProcessLookupError:
-                self._log(f"WARNING: Failed to kill BIRD process {pid}")
+                self._log_warning(f"Failed to kill BIRD process PID {pid}")
             # Remove pid file
             try:
                 os.remove(self._pidfile)

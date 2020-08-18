@@ -21,6 +21,7 @@
 import logging
 from typing import Dict, List, Optional
 
+from .exceptions import NsNetSimError
 from .generic_node import GenericNode
 from .router_node import RouterNode
 from .switch_node import SwitchNode
@@ -59,14 +60,18 @@ class Topology:
         """Build our simulated network."""
 
         logging.info("Build and run a topology")
-        # We need to create routers first, so they're up before we plug them into switches
-        for node in self._nodes:
-            if isinstance(node, RouterNode):
-                node.create()
-        # Then switches
-        for node in self._nodes:
-            if isinstance(node, SwitchNode):
-                node.create()
+        try:
+            # We need to create routers first, so they're up before we plug them into switches
+            for node in self._nodes:
+                if isinstance(node, RouterNode):
+                    node.create()
+            # Then switches
+            for node in self._nodes:
+                if isinstance(node, SwitchNode):
+                    node.create()
+        except NsNetSimError as err:
+            logging.error(f"Simulation error: {err}")
+            self.destroy()
 
     def destroy(self):
         """Destroy our simulated network."""
