@@ -74,31 +74,43 @@ class TestBirdRouterNode:
 
         topology.run()
 
-        protocols_output = router_x.birdc_show_protocols()
+        try:
+            routerx_protocols_output = router_x.birdc_show_protocols()
+            routery_protocols_output = router_y.birdc_show_protocols()
 
-        time.sleep(10)
-        routerx_master4_output = router_x.birdc_show_route_table("master4")
-        routery_master4_output = router_y.birdc_show_route_table("master4")
+            time.sleep(10)
+            routerx_master4_output = router_x.birdc_show_route_table("master4")
+            routery_master4_output = router_y.birdc_show_route_table("master4")
 
-        routerx_protocol_output = router_x.birdc("show symbols table")
+            routerx_symbols_output = router_x.birdc("show symbols table")
+        finally:
+            topology.destroy()
 
-        topology.destroy()
+        assert "rip4" in routerx_protocols_output, 'The "rip4" protocol should be in the protocols output'
+        assert "rip6" in routerx_protocols_output, 'The "rip6" protocol should be in the protocols output'
+        assert routerx_protocols_output["rip4"]["state"] == "up", 'The "rip4" protocol should be in state "up"'
+        assert routerx_protocols_output["rip6"]["state"] == "up", 'The "rip6" protocol should be in state "up"'
 
-        assert "rip4" in protocols_output, 'The "rip4" protocol should be in the protocols output'
-        assert "rip6" in protocols_output, 'The "rip6" protocol should be in the protocols output'
-        assert protocols_output["rip4"]["state"] == "up", 'The "rip4" protocol should be in state "up"'
-        assert protocols_output["rip6"]["state"] == "up", 'The "rip6" protocol should be in state "up"'
+        print(f"PROTOCOLSX: {routerx_protocols_output}")
+        print(f"PROTOCOLSY: {routery_protocols_output}")
+
+        print(f"MASTER4X: {routerx_master4_output}")
+        print(f"MASTER4Y: {routery_master4_output}")
 
         assert len(routerx_master4_output) == 1, "There should be one route on routerX"
-        assert routerx_master4_output[0]["prefix"] == "192.168.10.0/24", 'The route in routerX master4 must be "192.168.10.0/24"'
-        assert routerx_master4_output[0]["proto"] == "rip4_direct", 'The route in routerX master4 must be proto "rip4_direct"'
+        assert "192.168.10.0/24" in routerx_master4_output, 'The route in routerX master4 must be "192.168.10.0/24"'
+        assert (
+            routerx_master4_output["192.168.10.0/24"][0]["protocol"] == "rip4_direct"
+        ), 'The route in routerX master4 must be proto "rip4_direct"'
 
         assert len(routery_master4_output) == 1, "There should be one route on routerY"
-        assert routery_master4_output[0]["prefix"] == "192.168.10.0/24", 'The route in routerY master4 must be "192.168.10.0/24"'
-        assert routery_master4_output[0]["proto"] == "rip4", 'The route in routerY master4 must be proto "rip4"'
-        assert [x["nexthops"][0]["gateway"] for x in routery_master4_output if x["prefix"] == "192.168.10.0/24"][
-            0
-        ] == "192.168.0.1", 'The "gateway" should be "192.168.0.1"'
+        assert "192.168.10.0/24" in routery_master4_output, 'The route in routerY master4 must be "192.168.10.0/24"'
+        assert (
+            routery_master4_output["192.168.10.0/24"][0]["protocol"] == "rip4"
+        ), 'The route in routerY master4 must be proto "rip4"'
+        assert routery_master4_output["192.168.10.0/24"][0]["nexthops"] == [
+            {"gateway": "192.168.0.1", "interface": "eth0"}
+        ], 'The "gateway" should be "192.168.0.1"'
 
         routerx_protocol_expected = [
             CustomPytestRegex(r"0001 BIRD [0-9\.]+ ready."),
@@ -106,4 +118,4 @@ class TestBirdRouterNode:
             " master6 \trouting table",
             "0000 ",
         ]
-        assert routerx_protocol_output == routerx_protocol_expected, "Protocol output does not match what it should"
+        assert routerx_symbols_output == routerx_protocol_expected, "Protocol output does not match what it should"

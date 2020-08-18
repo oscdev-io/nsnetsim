@@ -28,10 +28,11 @@ class TestRouterNode:
 
         topology.run()
 
-        result_routes_v4 = router_x.run_ip(["--family", "inet", "route", "list"])
-        result_routes_v6 = router_x.run_ip(["--family", "inet6", "route", "list"])
-
-        topology.destroy()
+        try:
+            result_routes_v4 = router_x.run_ip(["--family", "inet", "route", "list"])
+            result_routes_v6 = router_x.run_ip(["--family", "inet6", "route", "list"])
+        finally:
+            topology.destroy()
 
         #
         # Routing tests
