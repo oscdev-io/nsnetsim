@@ -3,11 +3,11 @@
 import re
 from setuptools import find_packages, setup
 
-main_py = open('nsnetsim/__init__.py').read()
+main_py = open("nsnetsim/__init__.py").read()
 metadata = dict(re.findall(r"__([A-Z]+)__ = ['\"]([^']+)['\"]", main_py))
 
-NAME = 'nsnetsim'
-VERSION = metadata['VERSION']
+NAME = "nsnetsim"
+VERSION = metadata["VERSION"]
 
 with open("README.md", "r") as fh:
     LONG_DESCRIPTION = fh.read()
@@ -30,10 +30,7 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    python_requires='>=3.6',
-    install_requires=[
-        'birdclient',
-    ],
-
+    python_requires=">=3.6",
+    install_requires=["birdclient"],
     packages=find_packages(),
 )

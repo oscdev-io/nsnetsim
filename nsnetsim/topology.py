@@ -70,7 +70,7 @@ class Topology:
                 if isinstance(node, SwitchNode):
                     node.create()
         except NsNetSimError as err:
-            logging.error(f"Simulation error: {err}")
+            logging.error("Simulation error: %s", err)
             self.destroy()
 
     def destroy(self):
