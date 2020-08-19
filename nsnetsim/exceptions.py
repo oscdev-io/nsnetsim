@@ -1,4 +1,7 @@
-# Copyright (C) 2019, AllWorldIT.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Copyright (C) 2019-2020, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,12 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Router node support."""
-
-from .namespace_node import NamespaceNode
-
-__version__ = "0.0.1"
+"""nsNetSim exceptions."""
 
 
-class RouterNode(NamespaceNode):
-    """RouterNode implements a network isolated router node."""
+class NsNetSimError(RuntimeError):
+    """nsNetSim error exception."""
+
+    pass

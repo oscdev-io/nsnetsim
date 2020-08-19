@@ -1,4 +1,7 @@
-# Copyright (C) 2019, AllWorldIT.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Copyright (C) 2019-2020, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,13 +18,13 @@
 
 """Topology support."""
 
+import logging
 from typing import Dict, List, Optional
 
+from .exceptions import NsNetSimError
 from .generic_node import GenericNode
 from .router_node import RouterNode
 from .switch_node import SwitchNode
-
-__version__ = "0.0.1"
 
 
 class Topology:
@@ -39,58 +42,41 @@ class Topology:
         self._nodes = []
         self._nodes_by_name = {}
 
-    def add_router(self, name: str, router_class: RouterNode = RouterNode, **kwargs) -> RouterNode:
+    def add_node(self, node: GenericNode):
         """Add a router to our topology."""
 
-        # Grab the router class name
-        router_class_name = type(router_class).__name__
-        self.log(f'Adding router: [{router_class_name}] {name}')
+        node_type = type(node).__name__
+
+        logging.info("Adding node: [%s] %s", node_type, node.name)
 
         # Check if router exists.. if so throw an error
-        if name in self._nodes_by_name:
-            raise RuntimeError(f'Router node "{name}" already exists')
+        if node.name in self._nodes_by_name:
+            raise RuntimeError(f'Router node "{node.name}" already exists')
 
-        # Instantiate it as an object
-        router = router_class(name, logger=self.log, **kwargs)
+        self._nodes_by_name[node.name] = node
+        self._nodes.append(node)
 
-        self._nodes_by_name[name] = router
-        self._nodes.append(router)
-
-        return router
-
-    def add_switch(self, name: str) -> SwitchNode:
-        """Add a switch to our topology."""
-
-        self.log(f'Adding switch: {name}')
-
-        # Check if router exists.. if so throw an error
-        if name in self._nodes_by_name:
-            raise RuntimeError(f'Switch node "{name}" already exists')
-
-        switch = SwitchNode(name, logger=self.log)
-
-        self._nodes_by_name[name] = switch
-        self._nodes.append(switch)
-
-        return switch
-
-    def build(self):
+    def run(self):
         """Build our simulated network."""
 
-        self.log(f'Building topology')
-        # We need to create routers first
-        for node in self._nodes:
-            if isinstance(node, RouterNode):
-                node.create()
-        # Then switches
-        for node in self._nodes:
-            if isinstance(node, SwitchNode):
-                node.create()
+        logging.info("Build and run a topology")
+        try:
+            # We need to create routers first, so they're up before we plug them into switches
+            for node in self._nodes:
+                if isinstance(node, RouterNode):
+                    node.create()
+            # Then switches
+            for node in self._nodes:
+                if isinstance(node, SwitchNode):
+                    node.create()
+        except NsNetSimError as err:
+            logging.error(f"Simulation error: {err}")
+            self.destroy()
 
     def destroy(self):
         """Destroy our simulated network."""
 
-        self.log(f'Destroying topology')
+        logging.info("Destroying topology")
         # We need to remove routers first
         for node in self._nodes:
             if isinstance(node, RouterNode):
@@ -106,8 +92,3 @@ class Topology:
             return self._nodes_by_name[name]
         # Or None if not found
         return None
-
-    def log(self, msg: str):
-        """Log a message."""
-
-        print(f'LOG: {msg}')

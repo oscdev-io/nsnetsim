@@ -1,4 +1,7 @@
-# Copyright (C) 2019, AllWorldIT.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Copyright (C) 2019-2020, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,9 +18,8 @@
 
 """Generic node support."""
 
-from typing import Callable, Optional
-
-__version__ = "0.0.1"
+import logging
+import subprocess  # nosec
 
 
 class GenericNode:
@@ -25,19 +27,14 @@ class GenericNode:
 
     # Name of the node
     _name: str
-    # Logger
-    _logger: Optional[Callable[[str], None]]
     # Extra logging info
     _extra_log: str
 
-    def __init__(self, name, logger, **kwargs):
+    def __init__(self, name: str, **kwargs):
         """Initialize the object."""
 
         # Set the node name
         self._name = name
-
-        # Set the logger to use
-        self._logger = logger
 
         # Extra logging info
         self._extra_log = ""
@@ -57,6 +54,14 @@ class GenericNode:
         self._log(f'Removing "{self.name}"{self._extra_log}')
         self._remove()
 
+    def run_check_call(self, args, **kwargs) -> subprocess.CompletedProcess:
+        """Run command inside the namespace similar to check_call."""
+        return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True, text=True, **kwargs)  # nosec
+
+    def run_check_output(self, args, **kwargs) -> subprocess.CompletedProcess:
+        """Run command inside the namespace similar to check_call."""
+        return subprocess.run(args, capture_output=True, check=True, text=True, **kwargs)  # nosec
+
     @property
     def name(self):
         """Return the node name."""
@@ -68,19 +73,22 @@ class GenericNode:
 
     def _create(self):
         """Create this node, should be overridden in child classes."""
-        raise NotImplementedError('The _create() method should be defined in the child class')
+        raise NotImplementedError("The _create() method should be defined in the child class")
 
     def _remove(self):
         """Remove this node, should be overridden in child classes."""
-        raise NotImplementedError('The _remove() method should be defined in the child class')
+        raise NotImplementedError("The _remove() method should be defined in the child class")
 
     def _log(self, msg: str):
-        """Log a message either using the logger provided or just using print."""
+        """Log a message."""
 
         node_type = type(self).__name__
-        newmsg = f'[{node_type}] {msg}'
 
-        if self._logger:
-            self._logger(newmsg)
-        else:
-            print(newmsg)
+        logging.info("[%s] %s", node_type, msg)
+
+    def _log_warning(self, msg: str):
+        """Log a message."""
+
+        node_type = type(self).__name__
+
+        logging.warning("[%s] %s", node_type, msg)
