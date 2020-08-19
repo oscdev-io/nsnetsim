@@ -29,7 +29,6 @@ test_job:
     paths:
     - build/
 
-
 prepare_release:
   stage: prepare_release
   rules:
