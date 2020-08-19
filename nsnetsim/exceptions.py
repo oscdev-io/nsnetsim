@@ -21,5 +21,3 @@
 
 class NsNetSimError(RuntimeError):
     """nsNetSim error exception."""
-
-    pass

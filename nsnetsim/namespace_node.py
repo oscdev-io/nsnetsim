@@ -143,11 +143,11 @@ class NamespaceNode(GenericNode):
 
     def run_in_ns_check_call(self, args, **kwargs) -> Any:
         """Run command inside the namespace similar to check_call."""
-        return self._run_in_ns(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True, text=True, **kwargs)
+        return self._run_in_ns(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, **kwargs)
 
     def run_in_ns_check_output(self, args, **kwargs) -> Any:
         """Run command inside the namespace similar to check_call."""
-        return self._run_in_ns(args, capture_output=True, check=True, text=True, **kwargs)
+        return self._run_in_ns(args, capture_output=True, text=True, **kwargs)
 
     def run_ip(self, args: List[str]) -> Any:
         """Run the 'ip' tool and decode its return output."""
@@ -157,7 +157,7 @@ class NamespaceNode(GenericNode):
         cmd_args.extend(args)
 
         # Grab result from process execution
-        result = self._run_in_ns(cmd_args, capture_output=True, check=True)
+        result = self._run_in_ns(cmd_args, capture_output=True)
 
         # Return the decoded json output
         return json.loads(result.stdout)
@@ -170,7 +170,7 @@ class NamespaceNode(GenericNode):
         cmd_args.extend(args)
 
         # Run command
-        return subprocess.run(cmd_args, **kwargs)  # nosec
+        return subprocess.run(cmd_args, check=True, **kwargs)  # nosec
 
     @property
     def namespace(self):

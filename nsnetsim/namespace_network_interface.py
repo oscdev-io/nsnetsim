@@ -23,13 +23,12 @@ import random
 import subprocess  # nosec
 import time
 from typing import Any, Dict, List, Union, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from .namespace_node import NamespaceNode
-
 from .exceptions import NsNetSimError
 from .generic_node import GenericNode
 from .netns import NetNS
+
+if TYPE_CHECKING:
+    from .namespace_node import NamespaceNode
 
 
 class NamespaceNetworkInterface(GenericNode):
