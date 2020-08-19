@@ -50,16 +50,16 @@ def setns(handle: Union[IO, int], nstype: int) -> int:
     numeric file  descriptor or a Python object with a fileno() method.
     """
 
-    if isinstance(handle, int):
+    if isinstance(handle, int):  # pragma: no cover
         filefd = handle
     elif hasattr(handle, "fileno"):
         filefd = handle.fileno()
-    else:
+    else:  # pragma: no cover
         raise TypeError("The 'handle' parameter must either be a file object or file descriptor")
 
     ret = libc.setns(filefd, nstype)
 
-    if ret == -1:
+    if ret == -1:  # pragma: no cover
         error = ctypes.get_errno()
         raise OSError(error, os.strerror(error))
 
@@ -80,7 +80,7 @@ def get_ns_path(nspath: str = None, nsname: str = None, nspid: int = None):
     elif nspid:
         nspath = "/proc/%d/ns/net" % nspid
 
-    if (not nspath) or (not os.path.exists(nspath)):
+    if (not nspath) or (not os.path.exists(nspath)):  # pragma: no cover
         raise ValueError(f"Namespace path '{nspath}' does not exist")
 
     return nspath

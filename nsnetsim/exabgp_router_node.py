@@ -54,7 +54,7 @@ class ExaBGPRouterNode(RouterNode):
         # We should be getting a config file
         configfile = kwargs.get("configfile", None)
         # Check it exists
-        if configfile and (not os.path.exists(configfile)):
+        if configfile and (not os.path.exists(configfile)):  # pragma: no cover
             raise NsNetSimError(f'ExaBGP config file "{configfile}" does not exist')
         # Set config file
         self._configfile = configfile
@@ -81,7 +81,7 @@ class ExaBGPRouterNode(RouterNode):
 
         try:
             res = self.run_in_ns_check_output(cmdline, env=environment)
-        except subprocess.CalledProcessError as err:
+        except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to run ExaBGP command {cmdline}: {err.stderr}") from None
 
         return res.stdout.splitlines()
@@ -109,7 +109,7 @@ class ExaBGPRouterNode(RouterNode):
 
         try:
             self.run_check_call(["/usr/bin/mkfifo", self._fifo_in, self._fifo_out])
-        except subprocess.CalledProcessError as err:
+        except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to create ExaBGP fifo files: {err.stdout}")
 
         # Run ExaBGP within the network namespace
@@ -126,17 +126,17 @@ class ExaBGPRouterNode(RouterNode):
             try:
                 with open(self._pidfile, "r") as pidfile_file:
                     pid = int(pidfile_file.read())
-            except OSError as err:
+            except OSError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to open PID file '{self._pidfile}' for writing: {err}")
             # Terminate process
             try:
                 os.kill(pid, signal.SIGTERM)
-            except ProcessLookupError:
+            except ProcessLookupError:  # pragma: no cover
                 self._log_warning(f"Failed to kill ExaBGP process PID {pid}")
             # Remove pid file
             try:
                 os.remove(self._pidfile)
-            except FileNotFoundError:
+            except FileNotFoundError:  # pragma: no cover
                 pass
 
         # Remove fifo's

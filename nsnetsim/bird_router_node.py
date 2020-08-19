@@ -46,10 +46,10 @@ class BirdRouterNode(RouterNode):
 
         # We should be getting a config file
         configfile = kwargs.get("configfile", None)
-        if not configfile:
+        if not configfile:  # pragma: no cover
             raise NsNetSimError('The "configfile" argument should of been provided')
         # Check it exists
-        if not os.path.exists(configfile):
+        if not os.path.exists(configfile):  # pragma: no cover
             raise NsNetSimError(f'BIRD config file "{configfile}" does not exist')
         # Set config file
         self._configfile = configfile
@@ -61,7 +61,7 @@ class BirdRouterNode(RouterNode):
         # Test config file
         try:
             self.run_check_call(["/usr/bin/bird", "-c", self._configfile, "-p"])  # nosec
-        except subprocess.CalledProcessError as err:
+        except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to validate BIRD config file '{self._configfile}': {err.stdout}") from None
 
         # We start out with no process
@@ -73,7 +73,7 @@ class BirdRouterNode(RouterNode):
         birdc = BirdClient(self._controlsocket)
         try:
             return birdc.query(query)
-        except BirdClientError as err:
+        except BirdClientError as err:  # pragma: no cover
             raise NsNetSimError(f"{err}") from err
 
     def birdc_show_status(self) -> Dict[str, str]:
@@ -81,7 +81,7 @@ class BirdRouterNode(RouterNode):
         birdc = BirdClient(self._controlsocket)
         try:
             return birdc.show_status()
-        except BirdClientError as err:
+        except BirdClientError as err:  # pragma: no cover
             raise NsNetSimError(f"{err}") from err
 
     def birdc_show_protocols(self) -> Dict[str, Any]:
@@ -89,7 +89,7 @@ class BirdRouterNode(RouterNode):
         birdc = BirdClient(self._controlsocket)
         try:
             return birdc.show_protocols()
-        except BirdClientError as err:
+        except BirdClientError as err:  # pragma: no cover
             raise NsNetSimError(f"{err}") from err
 
     def birdc_show_route_table(self, table: str) -> List:
@@ -97,7 +97,7 @@ class BirdRouterNode(RouterNode):
         birdc = BirdClient(self._controlsocket)
         try:
             return birdc.show_route_table(table)
-        except BirdClientError as err:
+        except BirdClientError as err:  # pragma: no cover
             raise NsNetSimError(f"{err}") from err
 
     def _create(self):
@@ -109,7 +109,7 @@ class BirdRouterNode(RouterNode):
         # Run bird within the network namespace
         try:
             self.run_in_ns_check_call(["bird", "-c", self._configfile, "-s", self._controlsocket, "-P", self._pidfile])
-        except subprocess.CalledProcessError as err:
+        except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to start BIRD with configuration file '{self._configfile}': {err.stdout}") from None
 
     def _remove(self):
@@ -120,17 +120,17 @@ class BirdRouterNode(RouterNode):
             try:
                 with open(self._pidfile, "r") as pidfile_file:
                     pid = int(pidfile_file.read())
-            except OSError as err:
+            except OSError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to open PID file '{self._pidfile}' for writing: {err}")
             # Terminate process
             try:
                 os.kill(pid, signal.SIGTERM)
-            except ProcessLookupError:
+            except ProcessLookupError:  # pragma: no cover
                 self._log_warning(f"Failed to kill BIRD process PID {pid}")
             # Remove pid file
             try:
                 os.remove(self._pidfile)
-            except FileNotFoundError:
+            except FileNotFoundError:  # pragma: no cover
                 pass
 
         # Call parent remove

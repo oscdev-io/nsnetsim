@@ -57,7 +57,7 @@ class NamespaceNode(GenericNode):
         if not os.path.exists(self._rundir):
             try:
                 os.makedirs(self._rundir)
-            except OSError as err:
+            except OSError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to create run directory '{self._rundir}': {err}") from None
 
         # Indicate the namespace has not been created yet
@@ -72,14 +72,14 @@ class NamespaceNode(GenericNode):
         # Create namespace
         try:
             self.run_check_call(["/usr/bin/ip", "netns", "add", self.namespace])  # nosec
-        except subprocess.CalledProcessError as err:
+        except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to add network namespace '{self.namespace}': {err.stdout}") from None
         self._created = True
 
         # Bring the lo interface up
         try:
             self.run_in_ns_check_call(["/usr/bin/ip", "link", "set", "lo", "up"])
-        except subprocess.CalledProcessError as err:
+        except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to bring device 'lo' up in namespace '{self.namespace}': {err.stdout}") from None
 
         # Create interfaces
@@ -93,12 +93,12 @@ class NamespaceNode(GenericNode):
             try:
                 with open("/proc/sys/net/ipv4/conf/all/forwarding", "w") as forwarding_file:
                     forwarding_file.write("1")
-            except OSError as err:
+            except OSError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to enable IPv4 forwarding in network namespace '{self.namespace}': {err}") from None
             try:
                 with open("/proc/sys/net/ipv6/conf/all/forwarding", "w") as forwarding_file:
                     forwarding_file.write("1")
-            except OSError as err:
+            except OSError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to enable IPv6 forwarding in network namespace '{self.namespace}': {err}") from None
 
         # Add routes to the namespace
@@ -107,7 +107,7 @@ class NamespaceNode(GenericNode):
             route_args.extend(route)
             try:
                 self.run_in_ns_check_call(route_args)
-            except subprocess.CalledProcessError as err:
+            except subprocess.CalledProcessError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to add route '{route}' to namespace '{self.namespace}': {err.stdout}") from None
 
     def _remove(self):
@@ -121,7 +121,7 @@ class NamespaceNode(GenericNode):
         if self._created:
             try:
                 self.run_check_call(["/usr/bin/ip", "netns", "del", self.namespace])
-            except subprocess.CalledProcessError as err:
+            except subprocess.CalledProcessError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to remove network namespace '{self.namespace}': {err.stdout}") from None
             # Flip flag to indicate that the namespace is no longer created
             self._created = False

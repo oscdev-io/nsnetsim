@@ -69,7 +69,7 @@ class GenericNode:
 
     def _init(self, **kwargs):
         """Initialize this node, should be overridden in child classes."""
-        return kwargs
+        raise NotImplementedError("The _init() method should be defined in the child class")
 
     def _create(self):
         """Create this node, should be overridden in child classes."""
@@ -86,7 +86,7 @@ class GenericNode:
 
         logging.info("[%s] %s", node_type, msg)
 
-    def _log_warning(self, msg: str):
+    def _log_warning(self, msg: str):  # pragma: no cover
         """Log a message."""
 
         node_type = type(self).__name__

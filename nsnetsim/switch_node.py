@@ -55,14 +55,14 @@ class SwitchNode(GenericNode):
 
         try:
             self.run_check_call(["/usr/bin/ip", "link", "add", self.bridge_name, "type", "bridge", "forward_delay", "0"])
-        except subprocess.CalledProcessError as err:
+        except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to add bridge '{self.bridge_name}' to host: {err.stdout}") from None
         # Indicate that the bridge was created
         self._created = True
 
         try:
             self.run_check_call(["/usr/bin/ip", "link", "set", self.bridge_name, "up"])
-        except subprocess.CalledProcessError as err:
+        except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to set bridge '{self.bridge_name}' up: {err.stdout}") from None
 
         # Add interfaces to the bridge by setting the bridge as the interface master
@@ -70,7 +70,7 @@ class SwitchNode(GenericNode):
             self._log(f"Adding interface '{interface.name}' from '{interface.namespace_node.name}' to switch '{self.name}'")
             try:
                 self.run_check_call(["/usr/bin/ip", "link", "set", interface.ifname_host, "master", self.bridge_name])
-            except subprocess.CalledProcessError as err:
+            except subprocess.CalledProcessError as err:  # pragma: no cover
                 raise NsNetSimError(
                     f"Failed to set master for '{interface.ifname_host}' to '{self.bridge_name}': {err.stdout}"
                 ) from None
@@ -81,7 +81,7 @@ class SwitchNode(GenericNode):
         if self._created:
             try:
                 self.run_check_call(["/usr/bin/ip", "link", "del", self.bridge_name])
-            except subprocess.CalledProcessError as err:
+            except subprocess.CalledProcessError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to remove host bridge '{self.bridge_name}': {err.stdout}")
             # Flip flag to indicate that the bridge is no longer created
             self._created = False
