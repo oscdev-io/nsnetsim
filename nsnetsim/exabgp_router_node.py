@@ -60,11 +60,12 @@ class ExaBGPRouterNode(RouterNode):
         self._configfile = configfile
 
         # Set named pipe
-        self._namedpipe = f"exabgp-{self._name}"
-        self._pidfile = f"{self._rundir}/exabgp-{self._name}.pid"
-        self._fifo_in = f"{self._rundir}/exabgp-{self._name}.in"
-        self._fifo_out = f"{self._rundir}/exabgp-{self._name}.out"
-        self._logfile = f"{self._rundir}/exabgp-{self._name}.log"
+        name = f"exabgp-{self._name}"
+        self._namedpipe = f"exabgp-{self.namespace}"
+        self._pidfile = f"{self._rundir}/{name}.pid"
+        self._fifo_in = f"/run/{self._namedpipe}.in"
+        self._fifo_out = f"/run/{self._namedpipe}.out"
+        self._logfile = f"{self._rundir}/{name}.log"
 
         # We start out with no process
         self._exabgp_process = None
