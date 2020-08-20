@@ -87,7 +87,7 @@ class Topology:
             if isinstance(node, SwitchNode):
                 node.remove()
 
-    def get_node(self, name: str) -> Optional[GenericNode]:
+    def node(self, name: str) -> Optional[GenericNode]:
         """Return a node with a given name."""
         if name in self._nodes_by_name:
             return self._nodes_by_name[name]
