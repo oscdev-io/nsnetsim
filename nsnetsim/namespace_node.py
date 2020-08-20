@@ -21,7 +21,7 @@
 import os
 import json
 import subprocess  # nosec
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from .exceptions import NsNetSimError
 from .generic_node import GenericNode
@@ -35,7 +35,7 @@ class NamespaceNode(GenericNode):
     # Name of the namespace we've created
     _namespace: str
     # Interfaces we've added to the namespace
-    _interfaces: List[NamespaceNetworkInterface]
+    _interfaces: Dict[str, NamespaceNetworkInterface]
     # Create a run dir
     _rundir: str
     # Routes to add
@@ -50,7 +50,7 @@ class NamespaceNode(GenericNode):
         self._namespace = f"ns-{self.name}"
 
         # Start with a clean list of interfaces
-        self._interfaces = []
+        self._interfaces = {}
 
         # Create a directory in /run for us
         self._rundir = f"/run/nsnetsim/{self._namespace}"
@@ -83,7 +83,7 @@ class NamespaceNode(GenericNode):
             raise NsNetSimError(f"Failed to bring device 'lo' up in namespace '{self.namespace}': {err.stdout}") from None
 
         # Create interfaces
-        for interface in self._interfaces:
+        for _, interface in self._interfaces.items():
             # Create interface
             interface.create()
 
@@ -114,7 +114,7 @@ class NamespaceNode(GenericNode):
         """Remove the namespace."""
 
         # Remove interfaces first
-        for interface in reversed(self._interfaces):
+        for _, interface in self._interfaces.items():
             interface.remove()
 
         # Remove the namespace
@@ -126,16 +126,48 @@ class NamespaceNode(GenericNode):
             # Flip flag to indicate that the namespace is no longer created
             self._created = False
 
-    def add_interface(self, name: str, mac: Optional[str] = None) -> NamespaceNetworkInterface:
-        """Add network interface to namespace."""
+    def add_interface(self, name: str, mac: Optional[str] = None, ips: Optional[Union[str, list]] = None):
+        """
+        Add network interface to namespace.
 
-        # Build options
-        args: Dict[str, Any] = {"name": name, "namespace_node": self, "mac": mac}
+        Parameters
+        ----------
+        name : str
+            Name of interface to add. eg. eth0.
+        mac : Optional[str]
+            Optional MAC address to add, else it will be randomly generated.
+        ips : Optional[Union[str, list]]
+            Optinal IP's to add to the interface, either one, or a list of many.
 
-        interface = NamespaceNetworkInterface(**args)
-        self._interfaces.append(interface)
+        """
 
-        return interface
+        # Check we don't have an interface with this name already
+        if name in self._interfaces:
+            raise NsNetSimError(f"Interface name '{name}' already exists'")
+
+        # Create interface
+        interface = NamespaceNetworkInterface(name=name, namespace_node=self, mac=mac)
+
+        # Add to our internal structure
+        self._interfaces[name] = interface
+
+        # If we have IP's, add them too
+        if ips:
+            interface.add_ip(ips)
+
+    def interface(self, name: str) -> Optional[NamespaceNetworkInterface]:
+        """
+        Return an interface with a specific name.
+
+        If the interface cannot be found `None` is returned.
+        """
+
+        # If we have the interface with this name, return it
+        if name in self._interfaces:
+            return self._interfaces[name]
+
+        # Else return None
+        return None
 
     def add_route(self, route: List[str]):
         """Add route to the namespace."""
