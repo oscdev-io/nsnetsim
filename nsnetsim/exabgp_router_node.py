@@ -109,9 +109,14 @@ class ExaBGPRouterNode(RouterNode):
         environment["exabgp.log.destination"] = self._logfile
 
         try:
-            self.run_check_call(["/usr/bin/mkfifo", self._fifo_in, self._fifo_out])
-        except subprocess.CalledProcessError as err:  # pragma: no cover
-            raise NsNetSimError(f"Failed to create ExaBGP fifo files: {err.stdout}")
+            os.mkfifo(self._fifo_in)
+        except OSError as err:  # pragma: no cover
+            raise NsNetSimError(f"Failed to create ExaBGP fifo file '{self._fifo_in}': {err}")
+
+        try:
+            os.mkfifo(self._fifo_out)
+        except OSError as err:  # pragma: no cover
+            raise NsNetSimError(f"Failed to create ExaBGP fifo file '{self._fifo_out}': {err}")
 
         # Run ExaBGP within the network namespace
         try:
