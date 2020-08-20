@@ -32,23 +32,20 @@ class TestRouterNode:
 
         topology = Topology()
 
-        router_x = RouterNode("routerX")
-        topology.add_node(router_x)
-        router_x_eth0 = router_x.add_interface("eth0", mac="02:01:00:00:00:01")
-        router_x_eth0.add_ip(["192.168.0.1/24", "fec0::1/64"])
+        topology.add_node(RouterNode("r1"))
+        topology.node("r1").add_interface("eth0", mac="02:01:00:00:00:01", ips=["192.168.0.1/24", "fec0::1/64"])
 
-        router_x.add_route(["192.168.90.0/24", "via", "192.168.0.2"])
-        router_x.add_route(["fec0:10::/64", "via", "fec0::2"])
+        topology.node("r1").add_route(["192.168.90.0/24", "via", "192.168.0.2"])
+        topology.node("r1").add_route(["fec0:10::/64", "via", "fec0::2"])
 
-        switch_1 = SwitchNode("switch1")
-        topology.add_node(switch_1)
-        switch_1.add_interface(router_x_eth0)
+        topology.add_node(SwitchNode("s1"))
+        topology.node("s1").add_interface(topology.node("r1").interface("eth0"))
 
         topology.run()
 
         try:
-            result_routes_v4 = router_x.run_ip(["--family", "inet", "route", "list"])
-            result_routes_v6 = router_x.run_ip(["--family", "inet6", "route", "list"])
+            result_routes_v4 = topology.node("r1").run_ip(["--family", "inet", "route", "list"])
+            result_routes_v6 = topology.node("r1").run_ip(["--family", "inet6", "route", "list"])
         finally:
             topology.destroy()
 
