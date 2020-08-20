@@ -60,11 +60,12 @@ class ExaBGPRouterNode(RouterNode):
         self._configfile = configfile
 
         # Set named pipe
-        self._namedpipe = f"exabgp-{self._name}"
-        self._pidfile = f"{self._rundir}/exabgp-{self._name}.pid"
-        self._fifo_in = f"{self._rundir}/exabgp-{self._name}.in"
-        self._fifo_out = f"{self._rundir}/exabgp-{self._name}.out"
-        self._logfile = f"{self._rundir}/exabgp-{self._name}.log"
+        name = f"exabgp-{self._name}"
+        self._namedpipe = f"exabgp-{self.namespace}"
+        self._pidfile = f"{self._rundir}/{name}.pid"
+        self._fifo_in = f"/run/{self._namedpipe}.in"
+        self._fifo_out = f"/run/{self._namedpipe}.out"
+        self._logfile = f"{self._rundir}/{name}.log"
 
         # We start out with no process
         self._exabgp_process = None
@@ -108,9 +109,14 @@ class ExaBGPRouterNode(RouterNode):
         environment["exabgp.log.destination"] = self._logfile
 
         try:
-            self.run_check_call(["/usr/bin/mkfifo", self._fifo_in, self._fifo_out])
-        except subprocess.CalledProcessError as err:  # pragma: no cover
-            raise NsNetSimError(f"Failed to create ExaBGP fifo files: {err.stdout}")
+            os.mkfifo(self._fifo_in)
+        except OSError as err:  # pragma: no cover
+            raise NsNetSimError(f"Failed to create ExaBGP fifo file '{self._fifo_in}': {err}")
+
+        try:
+            os.mkfifo(self._fifo_out)
+        except OSError as err:  # pragma: no cover
+            raise NsNetSimError(f"Failed to create ExaBGP fifo file '{self._fifo_out}': {err}")
 
         # Run ExaBGP within the network namespace
         try:

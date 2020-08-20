@@ -72,6 +72,7 @@ class Topology:
         except NsNetSimError as err:
             logging.error("Simulation error: %s", err)
             self.destroy()
+            raise NsNetSimError(f"Simulation error: {err}")
 
     def destroy(self):
         """Destroy our simulated network."""
@@ -86,7 +87,7 @@ class Topology:
             if isinstance(node, SwitchNode):
                 node.remove()
 
-    def get_node(self, name: str) -> Optional[GenericNode]:
+    def node(self, name: str) -> Optional[GenericNode]:
         """Return a node with a given name."""
         if name in self._nodes_by_name:
             return self._nodes_by_name[name]
