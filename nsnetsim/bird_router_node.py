@@ -108,7 +108,7 @@ class BirdRouterNode(RouterNode):
 
         # Run bird within the network namespace
         try:
-            self.run_in_ns_check_call(["bird", "-c", self._configfile, "-s", self._controlsocket, "-P", self._pidfile])
+            self.run_in_ns_check_call(["/usr/bin/bird", "-c", self._configfile, "-s", self._controlsocket, "-P", self._pidfile])
         except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to start BIRD with configuration file '{self._configfile}': {err.stdout}") from None
 
