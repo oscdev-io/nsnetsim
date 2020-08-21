@@ -191,8 +191,11 @@ class NamespaceNode(GenericNode):
         # Grab result from process execution
         result = self._run_in_ns(cmd_args, capture_output=True)
 
-        # Return the decoded json output
-        return json.loads(result.stdout)
+        # Return the decoded json output if we got something back
+        if result.stdout:
+            return json.loads(result.stdout)
+
+        return None
 
     def _run_in_ns(self, args, **kwargs) -> Any:
         """Run command inside the namespace."""
