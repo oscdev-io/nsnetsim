@@ -21,7 +21,8 @@
 import os
 import signal
 import subprocess  # nosec
-from typing import Any, Dict, List
+import time
+from typing import Any, Dict, List, Optional
 
 from birdclient import BirdClient, BirdClientError
 from .exceptions import NsNetSimError
@@ -92,13 +93,50 @@ class BirdRouterNode(RouterNode):
         except BirdClientError as err:  # pragma: no cover
             raise NsNetSimError(f"{err}") from err
 
-    def birdc_show_route_table(self, table: str) -> List:
-        """Return a routing table."""
+    def birdc_show_route_table(self, table: str, expect_count: Optional[int] = None, expect_timeout: int = 30) -> List:
+        """
+        Return a routing table, optionally trying to wait for an expected count of entries and optional timeout.
+
+        Parameters
+        ----------
+        table : str
+            Routing table to retrieve.
+        expect_count : Optional[int]
+            Optional number of entries we expect, we will wait for `expect_timeout` seconds before giving up.
+        expect_timeout : int
+            Optional amount of time to wait to get `expect_count` entries, defaults to 30 (seconds).
+
+        """
+
         birdc = BirdClient(self._controlsocket)
-        try:
-            return birdc.show_route_table(table)
-        except BirdClientError as err:  # pragma: no cover
-            raise NsNetSimError(f"{err}") from err
+
+        # Save the start time
+        time_start = time.time()
+
+        # Start with a blank result
+        result = []
+        while True:
+            # Try get a result from birdc
+            try:
+                result = birdc.show_route_table(table)
+            except BirdClientError as err:  # pragma: no cover
+                raise NsNetSimError(f"{err}") from err
+
+            # If we're not expecting a count of table entries, we can just stop here
+            if not expect_count:
+                break
+
+            # If we are expecting a count, check to see if we have the number we need
+            if len(result) >= expect_count:
+                break
+
+            # If not, check to see if we've exceeded our timeout
+            if time.time() - time_start > expect_timeout:
+                break
+
+            time.sleep(0.5)
+
+        return result
 
     def _create(self):
         """Create the router."""
