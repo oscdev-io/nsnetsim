@@ -93,7 +93,9 @@ class BirdRouterNode(RouterNode):
         except BirdClientError as err:  # pragma: no cover
             raise NsNetSimError(f"{err}") from err
 
-    def birdc_show_route_table(self, table: str, expect_count: Optional[int] = None, expect_timeout: int = 30) -> List:
+    def birdc_show_route_table(  # pylint:disable=C0330
+        self, table: str, expect_count: Optional[int] = None, expect_content: Optional[str] = None, expect_timeout: int = 30
+    ) -> List:
         """
         Return a routing table, optionally trying to wait for an expected count of entries and optional timeout.
 
@@ -103,6 +105,9 @@ class BirdRouterNode(RouterNode):
             Routing table to retrieve.
         expect_count : Optional[int]
             Optional number of entries we expect, we will wait for `expect_timeout` seconds before giving up.
+        expect_content : Optional[str]
+            Optional string representation of the routing table to match against, we will wait for `expect_timeout` seconds before
+            giving up.
         expect_timeout : int
             Optional amount of time to wait to get `expect_count` entries, defaults to 30 (seconds).
 
@@ -122,12 +127,27 @@ class BirdRouterNode(RouterNode):
             except BirdClientError as err:  # pragma: no cover
                 raise NsNetSimError(f"{err}") from err
 
-            # If we're not expecting a count of table entries, we can just stop here
-            if not expect_count:
-                break
+            count_matches = False
+            content_matches = False
 
+            # If we're not expecting a count of table entries, we match
+            if not expect_count:
+                count_matches = True
             # If we are expecting a count, check to see if we have the number we need
-            if len(result) >= expect_count:
+            elif len(result) >= expect_count:
+                count_matches = True
+
+            # If we don't have a content match, we match
+            if not expect_content:
+                content_matches = True
+            # Else check that the result contains the content we're looking for
+            else:
+                result_str = f"{result}"
+                if expect_content in result_str:
+                    content_matches = True
+
+            # Check if have what we expected
+            if count_matches and content_matches:
                 break
 
             # If not, check to see if we've exceeded our timeout
