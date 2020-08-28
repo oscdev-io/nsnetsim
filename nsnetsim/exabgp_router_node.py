@@ -159,3 +159,8 @@ class ExaBGPRouterNode(RouterNode):
 
         # Call parent remove
         super()._remove()
+
+    @property
+    def logfile(self) -> str:
+        """Return our log file."""
+        return self._logfile
