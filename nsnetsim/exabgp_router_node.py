@@ -67,6 +67,12 @@ class ExaBGPRouterNode(RouterNode):
         self._fifo_out = f"/run/{self._namedpipe}.out"
         self._logfile = f"{self._rundir}/{name}.log"
 
+        # Test config file
+        try:
+            self.run_check_call(["/usr/bin/exabgp", "--test", self._configfile])  # nosec
+        except subprocess.CalledProcessError as err:  # pragma: no cover
+            raise NsNetSimError(f"Failed to validate ExaBGP config file '{self._configfile}': {err.stdout}") from None
+
         # We start out with no process
         self._exabgp_process = None
 
