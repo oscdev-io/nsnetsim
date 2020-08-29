@@ -131,10 +131,13 @@ class BirdRouterNode(RouterNode):
             content_matches = False
 
             # If we're not expecting a count of table entries, we match
-            if not expect_count:
+            if expect_count is None:
                 count_matches = True
-            # If we are expecting a count, check to see if we have the number we need
-            elif len(result) >= expect_count:
+            # If expect_count is 0, we need to wait until its 0
+            elif (expect_count == 0) and (len(result) == expect_count):
+                count_matches = True
+            # If we are expecting a count, check to see if we have at least the number we need
+            elif (expect_count > 0) and (len(result) >= expect_count):
                 count_matches = True
 
             # If we don't have a content match, we match
