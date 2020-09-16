@@ -122,10 +122,7 @@ class BirdRouterNode(RouterNode):
         result = []
         while True:
             # Try get a result from birdc
-            try:
-                result = birdc.show_route_table(table)
-            except BirdClientError as err:  # pragma: no cover
-                raise NsNetSimError(f"{err}") from err
+            result = birdc.show_route_table(table)
 
             count_matches = False
             content_matches = False
