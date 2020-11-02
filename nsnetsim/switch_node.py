@@ -40,7 +40,8 @@ class SwitchNode(GenericNode):
     def _init(self, **kwargs):
         """Initialize the object."""
 
-        name = kwargs.get("name")
+        # NK: Not needed atm
+        # name = kwargs.get("name")
 
         # Set the bridge name we're going to use
         self._bridge_name = f"br-{secrets.token_hex(5)}"
@@ -83,7 +84,7 @@ class SwitchNode(GenericNode):
             try:
                 self.run_check_call(["/usr/bin/ip", "link", "del", self.bridge_name])
             except subprocess.CalledProcessError as err:  # pragma: no cover
-                raise NsNetSimError(f"Failed to remove host bridge '{self.bridge_name}': {err.stdout}")
+                raise NsNetSimError(f"Failed to remove host bridge '{self.bridge_name}': {err.stdout}") from None
             # Flip flag to indicate that the bridge is no longer created
             self._created = False
 
