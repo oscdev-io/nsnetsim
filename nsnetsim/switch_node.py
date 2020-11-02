@@ -18,6 +18,7 @@
 
 """Switch node support."""
 
+import secrets
 import subprocess  # nosec
 from typing import List
 
@@ -42,7 +43,7 @@ class SwitchNode(GenericNode):
         name = kwargs.get("name")
 
         # Set the bridge name we're going to use
-        self._bridge_name = f"sw-{name}"
+        self._bridge_name = f"br-{secrets.token_hex(5)}"
 
         # Start out with no interfaces added to this switch\
         self._interfaces = []
