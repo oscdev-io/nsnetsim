@@ -72,7 +72,7 @@ class Topology:
         except NsNetSimError as err:
             logging.error("Simulation error: %s", err)
             self.destroy()
-            raise NsNetSimError(f"Simulation error: {err}")
+            raise NsNetSimError(f"Simulation error: {err}") from None
 
     def destroy(self):
         """Destroy our simulated network."""

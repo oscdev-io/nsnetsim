@@ -22,6 +22,7 @@ import os
 import json
 import subprocess  # nosec
 from typing import Any, Dict, List, Optional, Union
+import uuid
 
 from .exceptions import NsNetSimError
 from .generic_node import GenericNode
@@ -47,7 +48,7 @@ class NamespaceNode(GenericNode):
         """Initialize the object."""
 
         # Set the namespace name we're going to use
-        self._namespace = f"ns-{self.name}"
+        self._namespace = str(uuid.uuid4())
 
         # Start with a clean list of interfaces
         self._interfaces = {}

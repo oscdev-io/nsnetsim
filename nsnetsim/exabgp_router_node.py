@@ -117,18 +117,18 @@ class ExaBGPRouterNode(RouterNode):
         try:
             os.mkfifo(self._fifo_in)
         except OSError as err:  # pragma: no cover
-            raise NsNetSimError(f"Failed to create ExaBGP fifo file '{self._fifo_in}': {err}")
+            raise NsNetSimError(f"Failed to create ExaBGP fifo file '{self._fifo_in}': {err}") from None
 
         try:
             os.mkfifo(self._fifo_out)
         except OSError as err:  # pragma: no cover
-            raise NsNetSimError(f"Failed to create ExaBGP fifo file '{self._fifo_out}': {err}")
+            raise NsNetSimError(f"Failed to create ExaBGP fifo file '{self._fifo_out}': {err}") from None
 
         # Run ExaBGP within the network namespace
         try:
             self.run_in_ns_check_call(args, env=environment)
         except subprocess.CalledProcessError as err:
-            raise NsNetSimError(f"Failed to start ExaBGP with configuration file '{self._configfile}': {err.stdout}")
+            raise NsNetSimError(f"Failed to start ExaBGP with configuration file '{self._configfile}': {err.stdout}") from None
 
     def _remove(self):
         """Remove the router."""
@@ -139,7 +139,7 @@ class ExaBGPRouterNode(RouterNode):
                 with open(self._pidfile, "r") as pidfile_file:
                     pid = int(pidfile_file.read())
             except OSError as err:  # pragma: no cover
-                raise NsNetSimError(f"Failed to open PID file '{self._pidfile}' for writing: {err}")
+                raise NsNetSimError(f"Failed to open PID file '{self._pidfile}' for writing: {err}") from None
             # Terminate process
             try:
                 os.kill(pid, signal.SIGTERM)

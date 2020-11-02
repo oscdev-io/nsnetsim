@@ -93,9 +93,9 @@ class BirdRouterNode(RouterNode):
         except BirdClientError as err:  # pragma: no cover
             raise NsNetSimError(f"{err}") from err
 
-    def birdc_show_route_table(  # pylint:disable=C0330
+    def birdc_show_route_table(
         self, table: str, expect_count: Optional[int] = None, expect_content: Optional[str] = None, expect_timeout: int = 30
-    ) -> List:
+    ) -> List[Any]:
         """
         Return a routing table, optionally trying to wait for an expected count of entries and optional timeout.
 
@@ -179,7 +179,7 @@ class BirdRouterNode(RouterNode):
                 with open(self._pidfile, "r") as pidfile_file:
                     pid = int(pidfile_file.read())
             except OSError as err:  # pragma: no cover
-                raise NsNetSimError(f"Failed to open PID file '{self._pidfile}' for writing: {err}")
+                raise NsNetSimError(f"Failed to open PID file '{self._pidfile}' for writing: {err}") from None
             # Terminate process
             try:
                 os.kill(pid, signal.SIGTERM)

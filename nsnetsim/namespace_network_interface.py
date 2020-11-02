@@ -20,6 +20,7 @@
 
 import ipaddress
 import random
+import secrets
 import subprocess  # nosec
 import time
 from typing import Any, Dict, List, Union, TYPE_CHECKING
@@ -55,7 +56,7 @@ class NamespaceNetworkInterface(GenericNode):
             raise NsNetSimError('The argument "namespace_node" should of been specified')
 
         # Set the namespace name we're going to use
-        self._ifname_host = f"{self.namespace_node.name}-{self.name}"
+        self._ifname_host = f"veth-{secrets.token_hex(5)}"
 
         # Add some extra logging info
         self._extra_log = f' in "{self.namespace_node.name}"'
