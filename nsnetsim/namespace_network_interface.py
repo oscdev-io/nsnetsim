@@ -56,7 +56,7 @@ class NamespaceNetworkInterface(GenericNode):
             raise NsNetSimError('The argument "namespace_node" should of been specified')
 
         # Set the namespace name we're going to use
-        self._ifname_host = f"veth-{secrets.token_hex(5)}"
+        self._ifname_host = f"veth-{secrets.token_hex(4)}"
 
         # Add some extra logging info
         self._extra_log = f' in "{self.namespace_node.name}"'
@@ -90,25 +90,38 @@ class NamespaceNetworkInterface(GenericNode):
         """Create the interface."""
 
         # Create the interface pair
-        try:
-            self.run_check_call(
-                [
-                    "/usr/bin/ip",
-                    "link",
-                    "add",
-                    self.ifname_host,
-                    "link-netns",
-                    self.namespace_node.namespace,
-                    "type",
-                    "veth",
-                    "peer",
-                    self.ifname,
-                ]
-            )
-        except subprocess.CalledProcessError as err:  # pragma: no cover
+        retry = 5
+        error = ""
+        while retry > 0:
+            try:
+                self.run_check_call(
+                    [
+                        "/usr/bin/ip",
+                        "link",
+                        "add",
+                        self.ifname_host,
+                        "link-netns",
+                        self.namespace_node.namespace,
+                        "type",
+                        "veth",
+                        "peer",
+                        self.ifname,
+                    ]
+                )
+                break
+
+            except subprocess.CalledProcessError as err:  # pragma: no cover
+                error = f"{err.stdout}"
+                time.sleep(1)
+
+            # Reduce retry counter
+            retry -= 1
+
+        if not retry and error:
             raise NsNetSimError(
-                f"Failed to create veth {self.ifname_host} => {self.ifname} [{self.namespace_node.namespace}]: {err.stdout}"
-            ) from None
+                f"Failed to create veth {self.ifname_host} => {self.ifname} [{self.namespace_node.namespace}]: {error}"
+            )
+
         # Indicate the interface has been created
         self._created = True
 
