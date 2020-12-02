@@ -190,7 +190,10 @@ class NamespaceNode(GenericNode):
         cmd_args.extend(args)
 
         # Grab result from process execution
-        result = self._run_in_ns(cmd_args, capture_output=True)
+        try:
+            result = self.run_in_ns_check_call(cmd_args)
+        except subprocess.CalledProcessError as err:  # pragma: no cover
+            raise NsNetSimError(f"Failed to run '{cmd_args}' in '{self.namespace}': {err.stdout}") from None
 
         # Return the decoded json output if we got something back
         if result.stdout:
