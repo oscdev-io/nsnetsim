@@ -21,8 +21,7 @@
 import os
 import signal
 import subprocess  # nosec
-import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from birdclient import BirdClient, BirdClientError
 from .exceptions import NsNetSimError
@@ -93,70 +92,18 @@ class BirdRouterNode(RouterNode):
         except BirdClientError as err:  # pragma: no cover
             raise NsNetSimError(f"{err}") from err
 
-    def birdc_show_route_table(
-        self, table: str, expect_count: Optional[int] = None, expect_content: Optional[str] = None, expect_timeout: int = 30
-    ) -> List[Any]:
+    def birdc_show_route_table(self, table: str) -> List[Any]:
         """
-        Return a routing table, optionally trying to wait for an expected count of entries and optional timeout.
+        Return a BIRD routing table.
 
         Parameters
         ----------
         table : str
             Routing table to retrieve.
-        expect_count : Optional[int]
-            Optional number of entries we expect, we will wait for `expect_timeout` seconds before giving up.
-        expect_content : Optional[str]
-            Optional string representation of the routing table to match against, we will wait for `expect_timeout` seconds before
-            giving up.
-        expect_timeout : int
-            Optional amount of time to wait to get `expect_count` entries, defaults to 30 (seconds).
 
         """
 
-        birdc = BirdClient(self._controlsocket)
-
-        # Save the start time
-        time_start = time.time()
-
-        # Start with a blank result
-        result = []
-        while True:
-            # Try get a result from birdc
-            result = birdc.show_route_table(table)
-
-            count_matches = False
-            content_matches = False
-
-            # If we're not expecting a count of table entries, we match
-            if expect_count is None:
-                count_matches = True
-            # If expect_count is 0, we need to wait until its 0
-            elif (expect_count == 0) and (len(result) == expect_count):
-                count_matches = True
-            # If we are expecting a count, check to see if we have at least the number we need
-            elif (expect_count > 0) and (len(result) >= expect_count):
-                count_matches = True
-
-            # If we don't have a content match, we match
-            if not expect_content:
-                content_matches = True
-            # Else check that the result contains the content we're looking for
-            else:
-                result_str = f"{result}"
-                if expect_content in result_str:
-                    content_matches = True
-
-            # Check if have what we expected
-            if count_matches and content_matches:
-                break
-
-            # If not, check to see if we've exceeded our timeout
-            if time.time() - time_start > expect_timeout:
-                break
-
-            time.sleep(0.5)
-
-        return result
+        return BirdClient(self._controlsocket).show_route_table(table)
 
     def _create(self):
         """Create the router."""
