@@ -70,25 +70,22 @@ class BirdRouterNode(RouterNode):
     # Send something to birdc
     def birdc(self, query: str) -> List[str]:
         """Send a query to birdc."""
-        birdc = BirdClient(self._controlsocket)
         try:
-            return birdc.query(query)
+            return self._birdc.query(query)
         except BirdClientError as err:  # pragma: no cover
             raise NsNetSimError(f"{err}") from err
 
     def birdc_show_status(self) -> Dict[str, str]:
         """Return status."""
-        birdc = BirdClient(self._controlsocket)
         try:
-            return birdc.show_status()
+            return self._birdc.show_status()
         except BirdClientError as err:  # pragma: no cover
             raise NsNetSimError(f"{err}") from err
 
     def birdc_show_protocols(self) -> Dict[str, Any]:
         """Return protocols."""
-        birdc = BirdClient(self._controlsocket)
         try:
-            return birdc.show_protocols()
+            return self._birdc.show_protocols()
         except BirdClientError as err:  # pragma: no cover
             raise NsNetSimError(f"{err}") from err
 
@@ -103,7 +100,12 @@ class BirdRouterNode(RouterNode):
 
         """
 
-        return BirdClient(self._controlsocket).show_route_table(table)
+        return self._birdc.show_route_table(table)
+
+    @property
+    def _birdc(self) -> BirdClient:
+        """Return BirdClient instance."""
+        return BirdClient(self._controlsocket, debug=self._debug)
 
     def _create(self):
         """Create the router."""
