@@ -29,6 +29,8 @@ class GenericNode:
     _name: str
     # Extra logging info
     _extra_log: str
+    # Debug mode
+    _debug: bool
 
     def __init__(self, name: str, **kwargs):
         """Initialize the object."""
@@ -38,6 +40,9 @@ class GenericNode:
 
         # Extra logging info
         self._extra_log = ""
+
+        # Check if we have a debug flag
+        self._debug = kwargs.get("debug", False)
 
         # Call the nodes initialization function
         self._init(name=name, **kwargs)
