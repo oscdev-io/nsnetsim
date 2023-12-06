@@ -96,7 +96,7 @@ class BirdRouterNode(RouterNode):
         except BirdClientError as err:  # pragma: no cover
             raise NsNetSimError(f"{err}") from err
 
-    def birdc_show_route_table(self, table: str) -> List[Any]:
+    def birdc_show_route_table(self, table: str) -> Dict[Any, Any]:
         """
         Return a BIRD routing table.
 
