@@ -20,6 +20,8 @@
 
 from .namespace_node import NamespaceNode
 
+__all__ = ["RouterNode"]
+
 
 class RouterNode(NamespaceNode):
     """RouterNode implements a network isolated router node."""

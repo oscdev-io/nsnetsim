@@ -20,11 +20,13 @@
 
 import secrets
 import subprocess  # nosec
-from typing import List
+from typing import Any, List
 
-from .generic_node import GenericNode
 from .exceptions import NsNetSimError
+from .generic_node import GenericNode
 from .namespace_network_interface import NamespaceNetworkInterface
+
+__all__ = ["SwitchNode"]
 
 
 class SwitchNode(GenericNode):
@@ -37,7 +39,7 @@ class SwitchNode(GenericNode):
     # Created flag
     _created: bool
 
-    def _init(self, **kwargs):
+    def _init(self, **kwargs: Any) -> None:
         """Initialize the object."""
 
         # NK: Not needed atm
@@ -52,7 +54,7 @@ class SwitchNode(GenericNode):
         # Indicator that the bridge interface was created
         self._created = False
 
-    def _create(self):
+    def _create(self) -> None:
         """Create the switch."""
 
         try:
@@ -77,7 +79,7 @@ class SwitchNode(GenericNode):
                     f"Failed to set master for '{interface.ifname_host}' to '{self.bridge_name}': {err.stdout}"
                 ) from None
 
-    def _remove(self):
+    def _remove(self) -> None:
         """Remove the namespace."""
 
         if self._created:
@@ -88,18 +90,18 @@ class SwitchNode(GenericNode):
             # Flip flag to indicate that the bridge is no longer created
             self._created = False
 
-    def add_interface(self, interface: NamespaceNetworkInterface):
+    def add_interface(self, interface: NamespaceNetworkInterface) -> None:
         """Add an interface to this switch."""
 
         # Add an interface to the list we have of interfaces
         self._interfaces.append(interface)
 
     @property
-    def bridge_name(self):
+    def bridge_name(self) -> str:
         """Return the bridge name of this switch."""
         return self._bridge_name
 
     @property
-    def interfaces(self):
+    def interfaces(self) -> List[NamespaceNetworkInterface]:
         """Return the interfaces linked to this switch."""
         return self._interfaces

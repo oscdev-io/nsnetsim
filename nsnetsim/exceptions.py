@@ -18,6 +18,8 @@
 
 """nsNetSim exceptions."""
 
+__all__ = ["NsNetSimError"]
+
 
 class NsNetSimError(RuntimeError):
     """nsNetSim error exception."""
