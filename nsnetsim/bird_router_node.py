@@ -132,7 +132,7 @@ class BirdRouterNode(RouterNode):
         # Grab PID of the process...
         if os.path.exists(self._pidfile):
             try:
-                with open(self._pidfile, "r") as pidfile_file:
+                with open(self._pidfile, "r", encoding="UTF-8") as pidfile_file:
                     pid = int(pidfile_file.read())
             except OSError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to open PID file '{self._pidfile}' for writing: {err}") from None
