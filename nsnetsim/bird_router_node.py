@@ -82,6 +82,13 @@ class BirdRouterNode(RouterNode):
         except BirdClientError as err:  # pragma: no cover
             raise NsNetSimError(f"{err}") from err
 
+    def birdc_show_protocol(self, protocol: str) -> Dict[str, Any]:
+        """Return protocol."""
+        try:
+            return self._birdc.show_protocol(protocol)
+        except BirdClientError as err:  # pragma: no cover
+            raise NsNetSimError(f"{err}") from err
+
     def birdc_show_protocols(self) -> Dict[str, Any]:
         """Return protocols."""
         try:
