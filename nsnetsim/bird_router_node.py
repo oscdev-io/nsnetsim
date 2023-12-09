@@ -59,7 +59,11 @@ class BirdRouterNode(RouterNode):
         self._configfile = configfile
 
         # Set control socket
-        self._controlsocket = f"{self._rundir}/bird-control.socket"
+        controlsocket = kwargs.get("controlsocket")
+        if not controlsocket:
+            controlsocket = f"{self._rundir}/bird.ctl"
+        self._controlsocket = controlsocket
+
         self._pidfile = f"{self._rundir}/bird.pid"
 
         # Test config file
