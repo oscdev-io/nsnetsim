@@ -16,7 +16,16 @@ test_job:
   # Create environment
   - pacman -Syu --noconfirm
   - pacman -S --noconfirm grep python
-  - pacman -S --noconfirm python-pytest-runner python-pytest-cov python-pytest-black python-pytest-flake8 python-pytest-pycodestyle python-pytest-pydocstyle python-pytest-pylint python-pytest-mypy
+  - pacman -S --noconfirm
+      python-pytest-runner
+      python-pytest-cov
+      python-pytest-black
+      python-pytest-flake8
+      python-pytest-pycodestyle
+      python-pytest-pydocstyle
+      python-pytest-pylint
+      python-pytest-mypy
+      python-tox
   - pacman -S --noconfirm iproute2 bird exabgp
   # Run tests
   - tox
