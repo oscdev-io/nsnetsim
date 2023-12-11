@@ -17,6 +17,7 @@ test_job:
   - pacman -Syu --noconfirm
   - pacman -S --noconfirm grep python
   - pacman -S --noconfirm
+      git
       python-pytest-runner
       python-pytest-cov
       python-pytest-black
