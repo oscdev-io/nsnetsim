@@ -75,7 +75,7 @@ class ExaBGPRouterNode(RouterNode):
 
         # Test config file
         try:
-            self.run_check_call(["/usr/bin/exabgp", "--test", self._configfile])  # nosec
+            self.run_check_call(["exabgp", "--test", self._configfile])  # nosec
         except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to validate ExaBGP config file '{self._configfile}': {err.stdout}") from None
 
@@ -85,7 +85,7 @@ class ExaBGPRouterNode(RouterNode):
     def exabgpcli(self, args: List[str]) -> List[str]:
         """Send a query to ExaBGP."""
 
-        cmdline = ["/usr/bin/exabgpcli"]
+        cmdline = ["exabgpcli"]
         cmdline.extend(args)
 
         # Now for the actual configuration, which is done using the environment
@@ -109,7 +109,7 @@ class ExaBGPRouterNode(RouterNode):
         super()._create()
 
         # Work out the arguments we're going to pass
-        args = ["/usr/bin/exabgp"]
+        args = ["exabgp"]
         # If we were given a config file, add it
         if self._configfile:
             args.append(self._configfile)
