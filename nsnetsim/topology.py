@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Copyright (C) 2019-2020, AllWorldIT.
+# Copyright (C) 2019-2023, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,6 +26,8 @@ from .generic_node import GenericNode
 from .router_node import RouterNode
 from .switch_node import SwitchNode
 
+__all__ = ["Topology"]
+
 
 class Topology:
     """Topology implements the high level simulation setup."""
@@ -35,14 +37,14 @@ class Topology:
     # Switches by name
     _nodes_by_name: Dict[str, GenericNode]
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the object."""
 
         # Clear the lists of nodes we have
         self._nodes = []
         self._nodes_by_name = {}
 
-    def add_node(self, node: GenericNode):
+    def add_node(self, node: GenericNode) -> None:
         """Add a router to our topology."""
 
         node_type = type(node).__name__
@@ -56,7 +58,7 @@ class Topology:
         self._nodes_by_name[node.name] = node
         self._nodes.append(node)
 
-    def run(self):
+    def run(self) -> None:
         """Build our simulated network."""
 
         logging.info("Build and run a topology")
@@ -74,7 +76,7 @@ class Topology:
             self.destroy()
             raise NsNetSimError(f"Simulation error: {err}") from None
 
-    def destroy(self):
+    def destroy(self) -> None:
         """Destroy our simulated network."""
 
         logging.info("Destroying topology")

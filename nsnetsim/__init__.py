@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Copyright (C) 2019-2020, AllWorldIT.
+# Copyright (C) 2019-2023, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,4 +18,14 @@
 
 """Namespace Network Simulator package."""
 
-__VERSION__ = "0.2.0"
+import birdclient
+import packaging.version
+
+from .exceptions import NsNetSimError
+from .version import __version__
+
+# Check we have a sufficiently new version of birdclient
+if packaging.version.parse(birdclient.__version__) < packaging.version.parse("0.0.8"):
+    raise NsNetSimError("nsnetsim requires birdclient version 0.0.8 or newer")
+
+__all__ = ["__version__"]

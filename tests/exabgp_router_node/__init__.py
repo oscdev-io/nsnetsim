@@ -16,12 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Router node support."""
+"""Namespace Network Simulator tests package."""
 
-from .namespace_node import NamespaceNode
-
-__all__ = ["RouterNode"]
-
-
-class RouterNode(NamespaceNode):
-    """RouterNode implements a network isolated router node."""
+__all__: list[str] = []

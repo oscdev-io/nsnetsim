@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Copyright (C) 2019-2020, AllWorldIT.
+# Copyright (C) 2019-2023, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,13 +23,16 @@ import random
 import secrets
 import subprocess  # nosec
 import time
-from typing import Any, Dict, List, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+
 from .exceptions import NsNetSimError
 from .generic_node import GenericNode
 from .netns import NetNS
 
 if TYPE_CHECKING:  # pragma: no cover
     from .namespace_node import NamespaceNode
+
+__all__ = ["NamespaceNetworkInterface"]
 
 
 class NamespaceNetworkInterface(GenericNode):
@@ -40,37 +43,39 @@ class NamespaceNetworkInterface(GenericNode):
     # Name of the interfaces we've created
     _ifname_host: str
     # Interface mac address
-    _mac: str
+    _mac_address: str
     _settings: Dict[str, Any]
     # IP's for interface
     _ip_addresses: List[str]
     # Indication if the interface was created
     _created: bool
 
-    def _init(self, **kwargs):
+    def _init(self, **kwargs: Any) -> None:
         """Initialize the object."""
 
         # Make sure we have an namespace
-        self._namespace_node = kwargs.get("namespace_node", None)
-        if not self._namespace_node:  # pragma: no cover
+        namespace_node = kwargs.get("namespace_node")
+        if not namespace_node:  # pragma: no cover
             raise NsNetSimError('The argument "namespace_node" should of been specified')
+        self._namespace_node = namespace_node
+
+        # Set extra log
+        self._extra_log = f' in "{self.namespace_node.name}"'  # pylint: disable=attribute-defined-outside-init
 
         # Set the namespace name we're going to use
         self._ifname_host = f"veth-{secrets.token_hex(4)}"
 
-        # Add some extra logging info
-        self._extra_log = f' in "{self.namespace_node.name}"'
-
         # Assign an interface mac address
-        self._mac = kwargs.get("mac", None)
-        if not self._mac:
-            self._mac = "02:%02x:%02x:%02x:%02x:%02x" % (
-                random.randint(0, 255),  # nosec
-                random.randint(0, 255),  # nosec
-                random.randint(0, 255),  # nosec
-                random.randint(0, 255),  # nosec
-                random.randint(0, 255),  # nosec
+        mac_address: Optional[str] = kwargs.get("mac")
+        if not mac_address:
+            mac_address = "".join(
+                [
+                    f"02:{random.randint(0, 255):02x}:",  # nosec
+                    f"{random.randint(0, 255):02x}:{random.randint(0, 255):02x}:",  # nosec
+                    f"{random.randint(0, 255):02x}:{random.randint(0, 255):02x}",  # nosec
+                ]
             )
+        self._mac_address = mac_address
 
         self._settings = {
             # Disable IPv6 DAD by default
@@ -85,8 +90,7 @@ class NamespaceNetworkInterface(GenericNode):
         # Indicate the interface has not yet been created
         self._created = False
 
-    # pylama: ignore=C901,R0912
-    def _create(self):
+    def _create(self) -> None:  # noqa: CFQ001 # pylint: disable=too-many-branches,too-many-statements
         """Create the interface."""
 
         # Create the interface pair
@@ -127,19 +131,19 @@ class NamespaceNetworkInterface(GenericNode):
 
         # Set MAC address
         try:
-            self.namespace_node.run_in_ns_check_call(["/usr/bin/ip", "link", "set", self.ifname, "address", self._mac])
+            self.namespace_node.run_in_ns_check_call(["/usr/bin/ip", "link", "set", self.ifname, "address", self._mac_address])
         except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f'Failed to set MAC address for "{self.name}" interface "{self.ifname}": {err.stdout}') from None
 
         # Disable host IPv6 DAD
         try:
-            with open(f"/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_dad", "w") as ipv6_dad_file:
+            with open(f"/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_dad", "w", encoding="UTF-8") as ipv6_dad_file:
                 ipv6_dad_file.write("0")
         except OSError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to set host 'accept_dad' to 0: {err}") from None
         # Disable host IPv6 RA
         try:
-            with open(f"/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_ra", "w") as ipv6_ra_file:
+            with open(f"/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_ra", "w", encoding="UTF-8") as ipv6_ra_file:
                 ipv6_ra_file.write("0")
         except OSError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to set host 'accept_ra' to 0: {err}") from None
@@ -148,16 +152,16 @@ class NamespaceNetworkInterface(GenericNode):
         with NetNS(nsname=self.namespace_node.namespace):
             # Disable namespace IPv6 DAD
             try:
-                with open(f"/proc/sys/net/ipv6/conf/{self.ifname}/accept_dad", "w") as ipv6_dad_file:
+                with open(f"/proc/sys/net/ipv6/conf/{self.ifname}/accept_dad", "w", encoding="UTF-8") as ipv6_dad_file:
                     ipv6_dad_file.write(f"{self.ipv6_dad}")
             except OSError as err:  # pragma: no cover
-                raise NsNetSimError(f"Failed to set namespace 'accept_dad' to 0: {err}") from None
+                raise NsNetSimError(f"Failed to set namespace 'accept_dad' to {self.ipv6_dad}: {err}") from None
             # Disable namespace IPv6 RA
             try:
-                with open(f"/proc/sys/net/ipv6/conf/{self.ifname}/accept_ra", "w") as ipv6_ra_file:
+                with open(f"/proc/sys/net/ipv6/conf/{self.ifname}/accept_ra", "w", encoding="UTF-8") as ipv6_ra_file:
                     ipv6_ra_file.write(f"{self.ipv6_ra}")
             except OSError as err:  # pragma: no cover
-                raise NsNetSimError(f"Failed to set namespace 'accept_dad' to 0: {err}") from None
+                raise NsNetSimError(f"Failed to set namespace 'accept_dad' to {self.ipv6_ra}: {err}") from None
 
         # Add ip's to the namespace interface
         has_ipv6 = False
@@ -265,7 +269,7 @@ class NamespaceNetworkInterface(GenericNode):
                     f"Failed to get IPv6 link-local address in namespace '{self.namespace_node.namespace}': {result.stdout}"
                 )
 
-    def _remove(self):
+    def _remove(self) -> None:
         """Remove the interface."""
 
         # Remove the interface
@@ -277,7 +281,7 @@ class NamespaceNetworkInterface(GenericNode):
             # Indicate that the interface is no longer created
             self._created = False
 
-    def add_ip(self, ip_address: Union[str, list]):
+    def add_ip(self, ip_address: Union[str, List[str]]) -> None:
         """Add IP to the namespace interface."""
         if isinstance(ip_address, list):
             self._ip_addresses.extend(ip_address)
@@ -285,31 +289,31 @@ class NamespaceNetworkInterface(GenericNode):
             self._ip_addresses.append(ip_address)
 
     @property
-    def namespace_node(self):
+    def namespace_node(self) -> "NamespaceNode":
         """Return the namespace we're linked to."""
         return self._namespace_node
 
     @property
-    def ifname(self):
+    def ifname(self) -> str:
         """Return the namespace-side interface name."""
         return self._name
 
     @property
-    def ifname_host(self):
+    def ifname_host(self) -> str:
         """Return the host-side interface name."""
         return self._ifname_host
 
     @property
-    def ipv6_dad(self):
+    def ipv6_dad(self) -> int:
         """Return the interfaces IPv6 DAD attribute."""
-        return self._settings["ipv6_dad"]
+        return int(self._settings["ipv6_dad"])
 
     @property
-    def ipv6_ra(self):
+    def ipv6_ra(self) -> int:
         """Return the interfaces IPv6 RA attribute."""
-        return self._settings["ipv6_ra"]
+        return int(self._settings["ipv6_ra"])
 
     @property
-    def ip_addresses(self):
+    def ip_addresses(self) -> List[str]:
         """Return the IP addresses for the interface."""
         return self._ip_addresses

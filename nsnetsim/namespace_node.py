@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Copyright (C) 2019-2020, AllWorldIT.
+# Copyright (C) 2019-2023, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,16 +18,18 @@
 
 """Namespace node support."""
 
-import os
 import json
+import os
 import subprocess  # nosec
-from typing import Any, Dict, List, Optional, Union
 import uuid
+from typing import Any, Dict, List, Optional, Union
 
 from .exceptions import NsNetSimError
 from .generic_node import GenericNode
 from .namespace_network_interface import NamespaceNetworkInterface
 from .netns import NetNS
+
+__all__ = ["NamespaceNode"]
 
 
 class NamespaceNode(GenericNode):
@@ -44,8 +46,10 @@ class NamespaceNode(GenericNode):
     # Indication the namespace was created
     _created: bool
 
-    def _init(self, **kwargs):
+    def _init(self, **kwargs: Any) -> None:  # pylint: disable=unused-argument
         """Initialize the object."""
+
+        self._extra_log = ""
 
         # Set the namespace name we're going to use
         self._namespace = str(uuid.uuid4())
@@ -67,7 +71,7 @@ class NamespaceNode(GenericNode):
         # Start with no routes
         self._routes = []
 
-    def _create(self):
+    def _create(self) -> None:
         """Create the namespace."""
 
         # Create namespace
@@ -92,12 +96,12 @@ class NamespaceNode(GenericNode):
         with NetNS(nsname=self.namespace):
             # Enable forwarding
             try:
-                with open("/proc/sys/net/ipv4/conf/all/forwarding", "w") as forwarding_file:
+                with open("/proc/sys/net/ipv4/conf/all/forwarding", "w", encoding="UTF-8") as forwarding_file:
                     forwarding_file.write("1")
             except OSError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to enable IPv4 forwarding in network namespace '{self.namespace}': {err}") from None
             try:
-                with open("/proc/sys/net/ipv6/conf/all/forwarding", "w") as forwarding_file:
+                with open("/proc/sys/net/ipv6/conf/all/forwarding", "w", encoding="UTF-8") as forwarding_file:
                     forwarding_file.write("1")
             except OSError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to enable IPv6 forwarding in network namespace '{self.namespace}': {err}") from None
@@ -111,7 +115,7 @@ class NamespaceNode(GenericNode):
             except subprocess.CalledProcessError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to add route '{route}' to namespace '{self.namespace}': {err.stdout}") from None
 
-    def _remove(self):
+    def _remove(self) -> None:
         """Remove the namespace."""
 
         # Remove interfaces first
@@ -127,7 +131,7 @@ class NamespaceNode(GenericNode):
             # Flip flag to indicate that the namespace is no longer created
             self._created = False
 
-    def add_interface(self, name: str, mac: Optional[str] = None, ips: Optional[Union[str, list]] = None):
+    def add_interface(self, name: str, mac: Optional[str] = None, ips: Optional[Union[str, List[str]]] = None) -> None:
         """
         Add network interface to namespace.
 
@@ -170,15 +174,15 @@ class NamespaceNode(GenericNode):
         # Else return None
         return None
 
-    def add_route(self, route: List[str]):
+    def add_route(self, route: List[str]) -> None:
         """Add route to the namespace."""
         self._routes.append(route)
 
-    def run_in_ns_check_call(self, args, **kwargs) -> Any:
+    def run_in_ns_check_call(self, args: List[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         """Run command inside the namespace similar to check_call."""
         return self._run_in_ns(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, **kwargs)
 
-    def run_in_ns_check_output(self, args, **kwargs) -> Any:
+    def run_in_ns_check_output(self, args: List[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         """Run command inside the namespace similar to check_call."""
         return self._run_in_ns(args, capture_output=True, text=True, **kwargs)
 
@@ -201,7 +205,7 @@ class NamespaceNode(GenericNode):
 
         return None
 
-    def _run_in_ns(self, args, **kwargs) -> Any:
+    def _run_in_ns(self, args: List[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         """Run command inside the namespace."""
 
         # Build command to execute
@@ -212,11 +216,11 @@ class NamespaceNode(GenericNode):
         return subprocess.run(cmd_args, check=True, **kwargs)  # nosec
 
     @property
-    def namespace(self):
+    def namespace(self) -> str:
         """Return the namespace name."""
         return self._namespace
 
     @property
-    def routes(self):
+    def routes(self) -> List[List[str]]:
         """Return the namespace routes."""
         return self._routes

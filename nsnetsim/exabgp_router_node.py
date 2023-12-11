@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Copyright (C) 2019-2020, AllWorldIT.
+# Copyright (C) 2019-2023, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,14 +18,17 @@
 
 """ExaBGP router support."""
 
+import contextlib
 import getpass
 import os
 import signal
 import subprocess  # nosec
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from .exceptions import NsNetSimError
 from .router_node import RouterNode
+
+__all__ = ["ExaBGPRouterNode"]
 
 
 class ExaBGPRouterNode(RouterNode):
@@ -43,18 +46,21 @@ class ExaBGPRouterNode(RouterNode):
     # Log file
     _logfile: str
     # ExaBGP process
-    _exabgp_process: Optional[subprocess.CompletedProcess]
+    _exabgp_process: Optional[subprocess.CompletedProcess[str]]
 
-    def _init(self, **kwargs):
+    def _init(self, **kwargs: Any) -> None:
         """Initialize the object."""
 
         # Call parent create
         super()._init()
 
         # We should be getting a config file
-        configfile = kwargs.get("configfile", None)
+        configfile = kwargs.get("configfile")
+        # Check we have a config file
+        if not configfile:
+            raise NsNetSimError("ExaBGP config file not provided")
         # Check it exists
-        if configfile and (not os.path.exists(configfile)):  # pragma: no cover
+        if not os.path.exists(configfile):  # pragma: no cover
             raise NsNetSimError(f'ExaBGP config file "{configfile}" does not exist')
         # Set config file
         self._configfile = configfile
@@ -69,7 +75,7 @@ class ExaBGPRouterNode(RouterNode):
 
         # Test config file
         try:
-            self.run_check_call(["/usr/bin/exabgp", "--test", self._configfile])  # nosec
+            self.run_check_call(["exabgp", "--test", self._configfile])  # nosec
         except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to validate ExaBGP config file '{self._configfile}': {err.stdout}") from None
 
@@ -79,40 +85,44 @@ class ExaBGPRouterNode(RouterNode):
     def exabgpcli(self, args: List[str]) -> List[str]:
         """Send a query to ExaBGP."""
 
-        cmdline = ["/usr/bin/exabgpcli"]
+        cmdline = ["exabgpcli"]
         cmdline.extend(args)
 
         # Now for the actual configuration, which is done using the environment
-        environment = {}
-        environment["exabgp.api.pipename"] = self._namedpipe
+        environment = {
+            "exabgp.api.pipename": self._namedpipe,
+        }
 
         try:
             res = self.run_in_ns_check_output(cmdline, env=environment)
         except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to run ExaBGP command {cmdline}: {err.stderr}") from None
 
-        return res.stdout.splitlines()
+        ret: List[str] = res.stdout.splitlines()
 
-    def _create(self):
+        return ret
+
+    def _create(self) -> None:
         """Create the router."""
 
         # Call parent create
         super()._create()
 
         # Work out the arguments we're going to pass
-        args = ["/usr/bin/exabgp"]
+        args = ["exabgp"]
         # If we were given a config file, add it
         if self._configfile:
             args.append(self._configfile)
 
         # Now for the actual configuration, which is done using the environment
-        environment = {}
-        environment["exabgp.api.pipename"] = self._namedpipe
-        environment["exabgp.daemon.daemonize"] = "true"
-        environment["exabgp.daemon.pid"] = self._pidfile
-        environment["exabgp.daemon.user"] = getpass.getuser()
-        environment["exabgp.log.all"] = "true"
-        environment["exabgp.log.destination"] = self._logfile
+        environment = {
+            "exabgp.api.pipename": self._namedpipe,
+            "exabgp.daemon.daemonize": "true",
+            "exabgp.daemon.pid": self._pidfile,
+            "exabgp.daemon.user": getpass.getuser(),
+            "exabgp.log.all": "true",
+            "exabgp.log.destination": self._logfile,
+        }
 
         try:
             os.mkfifo(self._fifo_in)
@@ -130,13 +140,13 @@ class ExaBGPRouterNode(RouterNode):
         except subprocess.CalledProcessError as err:
             raise NsNetSimError(f"Failed to start ExaBGP with configuration file '{self._configfile}': {err.stdout}") from None
 
-    def _remove(self):
+    def _remove(self) -> None:
         """Remove the router."""
 
         # Grab PID of the process...
         if os.path.exists(self._pidfile):
             try:
-                with open(self._pidfile, "r") as pidfile_file:
+                with open(self._pidfile, "r", encoding="UTF-8") as pidfile_file:
                     pid = int(pidfile_file.read())
             except OSError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to open PID file '{self._pidfile}' for writing: {err}") from None
@@ -146,10 +156,8 @@ class ExaBGPRouterNode(RouterNode):
             except ProcessLookupError:  # pragma: no cover
                 self._log_warning(f"Failed to kill ExaBGP process PID {pid}")
             # Remove pid file
-            try:
+            with contextlib.suppress(FileNotFoundError):
                 os.remove(self._pidfile)
-            except FileNotFoundError:  # pragma: no cover
-                pass
 
         # Remove fifo's
         if os.path.exists(self._fifo_in):
