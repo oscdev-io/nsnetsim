@@ -1,0 +1,14 @@
+#!/bin/bash
+
+pacman -Q bird
+pacman -Q exabgp
+
+cd /root/nsnetsim
+
+set -ex
+
+#nice -n 20 pytest --cov=nsnetsim "${ARGS[@]}"
+#nice -n 20 coverage report --show-missing
+
+echo "RUNNING: tox -- ${ARGS[*]}"
+nice -n 20 tox -- "${ARGS[@]}"
