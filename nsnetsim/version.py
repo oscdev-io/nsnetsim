@@ -16,16 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Namespace Network Simulator package."""
+"""Namespace Network Simulator package version information."""
 
-import birdclient
-import packaging.version
-
-from .exceptions import NsNetSimError
-from .version import __version__
-
-# Check we have a sufficiently new version of birdclient
-if packaging.version.parse(birdclient.__version__) < packaging.version.parse("0.6.0"):
-    raise NsNetSimError("nsnetsim requires birdclient version 0.6.0 or newer")
-
-__all__ = ["__version__"]
+__version__ = "0.2.1"
