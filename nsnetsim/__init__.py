@@ -25,7 +25,7 @@ from .exceptions import NsNetSimError
 from .version import __version__
 
 # Check we have a sufficiently new version of birdclient
-if packaging.version.parse(birdclient.__version__) < packaging.version.parse("0.0.6"):
-    raise NsNetSimError("nsnetsim requires birdclient version 0.6.0 or newer")
+if packaging.version.parse(birdclient.__version__) < packaging.version.parse("0.0.8"):
+    raise NsNetSimError("nsnetsim requires birdclient version 0.0.8 or newer")
 
 __all__ = ["__version__"]
