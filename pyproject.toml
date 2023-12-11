@@ -25,6 +25,7 @@ dynamic = ["version"]
 dependencies = [
 # NK: Add these back after development
     "birdclient @ git+https://gitlab.oscdev.io/software/birdclient.git@master",
+    "packaging",
 ]
 
 [project.urls]
