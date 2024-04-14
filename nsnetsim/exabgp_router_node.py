@@ -109,36 +109,49 @@ class ExaBGPRouterNode(RouterNode):
         super()._create()
 
         # Work out the arguments we're going to pass
-        args = ["exabgp"]
-        # If we were given a config file, add it
-        if self._configfile:
-            args.append(self._configfile)
+        # args = ["exabgp"]
+        # # If we were given a config file, add it
+        # if self._configfile:
+        #    args.append(self._configfile)
+        # Run from sh so we can get the console output
+        args = ["sh", "-c", f"exabgp --debug {self._configfile} >> {self._logfile} 2>&1"]
 
         # Now for the actual configuration, which is done using the environment
         environment = {
             "exabgp.api.pipename": self._namedpipe,
-            "exabgp.daemon.daemonize": "true",
+            # NK: We will start it in the foreground in its own process below so we can continue with the other nodes to link the
+            # interface to the switch. This means we will not daemonize it here.
+            # "exabgp.daemon.daemonize": "true",
             "exabgp.daemon.pid": self._pidfile,
             "exabgp.daemon.user": getpass.getuser(),
             "exabgp.log.all": "true",
             "exabgp.log.destination": self._logfile,
         }
 
+        # Create fifos for exabgpcli
         try:
             os.mkfifo(self._fifo_in)
         except OSError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to create ExaBGP fifo file '{self._fifo_in}': {err}") from None
-
         try:
             os.mkfifo(self._fifo_out)
         except OSError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to create ExaBGP fifo file '{self._fifo_out}': {err}") from None
 
-        # Run ExaBGP within the network namespace
-        try:
-            self.run_in_ns_check_call(args, env=environment)
-        except subprocess.CalledProcessError as err:
-            raise NsNetSimError(f"Failed to start ExaBGP with configuration file '{self._configfile}': {err.stdout}") from None
+        # Fork ExaBGP into the background for statup
+        # NK: in some odd situations it seems to of hung during startup, so we're going to run it in a forked process so we can
+        # catch any output to console
+        pid = os.fork()
+        if pid == 0:
+            # Run ExaBGP within the network namespace
+            try:
+                self.run_in_ns_check_call(args, env=environment)
+            except subprocess.CalledProcessError as err:
+                raise NsNetSimError(f"Failed to start ExaBGP with configuration file '{self._configfile}': {err.stdout}") from None
+            # Exit child process using os._exit to bypass pytest SystemExit exception
+            os._exit(0)
+        elif pid < 0:
+            raise NsNetSimError("Failed to fork ExaBGP process")
 
     def _remove(self) -> None:
         """Remove the router."""
