@@ -205,6 +205,22 @@ class NamespaceNode(GenericNode):
 
         return None
 
+    def exec_in_ns(self, args: List[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        """Run command inside the namespace."""
+
+        # Build command to execute
+        cmd_args = ["/usr/bin/ip", "netns", "exec", self.namespace]
+        cmd_args.extend(args)
+
+        # Check if we have an environment to pass
+        environment = kwargs.get("environment", {})
+
+        # Run command
+        if environment:
+            os.execve(cmd_args[0], cmd_args, environment)  # nosec: B606
+        else:
+            os.execv(cmd_args[0], cmd_args)  # nosec: B606
+
     def _run_in_ns(self, args: List[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         """Run command inside the namespace."""
 
