@@ -20,6 +20,7 @@
 
 import contextlib
 import os
+import shutil
 import signal
 import subprocess  # nosec
 from typing import Any, Dict, List
@@ -44,9 +45,12 @@ class BirdRouterNode(RouterNode):
 
     def _init(self, **kwargs: Any) -> None:
         """Initialize the object."""
-
         # Call parent create
         super()._init()
+
+        # Make sure bird path is returned by which
+        if not shutil.which("bird"):
+            raise NsNetSimError("Bird binary not found in PATH")
 
         # We should be getting a config file
         configfile = kwargs.get("configfile")

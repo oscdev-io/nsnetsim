@@ -21,6 +21,7 @@
 import contextlib
 import getpass
 import os
+import shutil
 import signal
 import subprocess  # nosec
 from typing import Any, List, Optional
@@ -50,9 +51,12 @@ class ExaBGPRouterNode(RouterNode):
 
     def _init(self, **kwargs: Any) -> None:
         """Initialize the object."""
-
         # Call parent create
         super()._init()
+
+        # Make sure exabgp path is returned by which
+        if not shutil.which("exabgp"):
+            raise NsNetSimError("ExaBGP binary not found in PATH")
 
         # We should be getting a config file
         configfile = kwargs.get("configfile")
