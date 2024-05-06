@@ -18,12 +18,12 @@
 
 """StayRTR server support."""
 
-import contextlib
 import datetime
 import json
 import os
 import shutil
 import signal
+import subprocess
 from typing import Any, Dict, List, Optional
 
 from .exceptions import NsNetSimError
@@ -41,8 +41,17 @@ class StayRTRServerNode(RouterNode):
     _slurmfile: Optional[str]
     # PID file
     _pidfile: str
+    # Log file
+    _logfile: Optional[str]
+    # SSH key
+    _ssh_key_file: Optional[str]
+    # SSH authorized keys
+    _ssh_authorized_keys_file: Optional[str]
     # Args
     _args: List[str]
+
+    # Internal process
+    _process: Optional[subprocess.Popen]
 
     def _init(self, **kwargs: Any) -> None:
         """Initialize the object."""
@@ -73,8 +82,25 @@ class StayRTRServerNode(RouterNode):
             raise NsNetSimError(f'StayRTR config file "{self._slurmfile}" does not exist')
 
         self._pidfile = f"{self._rundir}/stayrtr.pid"
+        self._logfile = kwargs.get("logfile", None)
+
+        # Check if we have an SSH key and authorized keys file
+        self._ssh_key_file = kwargs.get("ssh_key_file")
+        self._ssh_authorized_keys_file = None
+        if self._ssh_key_file:
+            # Make sure the SSH key exists
+            if not os.path.exists(self._ssh_key_file):  # pragma: no cover
+                raise NsNetSimError(f'StayRTR SSH key file "{self._ssh_key_file}" does not exist')
+            # Make sure we have an authorized keys file
+            self._ssh_authorized_keys_file = kwargs.get("ssh_authorized_keys_file")
+            if not self._ssh_authorized_keys_file:  # pragma: no cover
+                raise NsNetSimError("SSH authorized keys 'ssh_authorized_keys' must be provided if SSH key 'ssh_key' is provided")
+            if not os.path.exists(self._ssh_authorized_keys_file):
+                raise NsNetSimError(f'StayRTR SSH authorized keys file "{self._ssh_authorized_keys_file}" does not exist')
 
         self._args = kwargs.get("args", [])
+
+        self._process = None
 
     def _create(self) -> None:
         """Create the server."""
@@ -85,44 +111,40 @@ class StayRTRServerNode(RouterNode):
         args = ["stayrtr", "-cache", self._cache]
         if self._slurmfile:
             args.extend(["-slurm", self._slurmfile])
+        if self._ssh_key_file:
+            args.extend(["-ssh.bind", ":22"])
+            args.append("-ssh.method.key")
+            args.extend(["-ssh.key", self._ssh_key_file])
+        if self._ssh_authorized_keys_file:
+            args.extend(["-ssh.auth.key.file", self._ssh_authorized_keys_file])
         args.extend(self._args)
 
         environment: Dict[str, str] = {}
 
-        # Fork StayRTR so we can save its PID
-        pid = os.fork()
-        if pid == 0:
-            # Write out PID file
-            with open(self._pidfile, "w", encoding="UTF-8") as pidfile_file:
-                pidfile_file.write(str(os.getpid()))
-            # Run StayRTR within the network namespace
-            try:
-                self.exec_in_ns(args, env=environment)
-            except OSError as err:
-                raise NsNetSimError(f"Failed to start StayRTR with SLURM file '{self._slurmfile}': {err}") from None
-            # If we got here it's an error
-            os._exit(1)
-        elif pid < 0:
-            raise NsNetSimError("Failed to fork StayRTR process")
+        logfile = self._logfile
+        if not logfile:
+            logfile = "/dev/null"
+
+        # Start StayRTR process using subprocess.Popen
+        logfile_f = open(logfile, "w", encoding="UTF-8")  # pylint: disable=consider-using-with
+        self._process = self.run_in_ns_popen(args, env=environment, stdout=logfile_f, stderr=subprocess.STDOUT)
+
+        # Write out PID file
+        with open(self._pidfile, "w", encoding="UTF-8") as f:
+            f.write(str(self._process.pid))
 
     def _remove(self) -> None:
         """Remove the server."""
 
-        # Grab PID of the process...
-        if os.path.exists(self._pidfile):
+        # Kill process
+        if self._process:
+            # Try terminate
+            self._process.terminate()
             try:
-                with open(self._pidfile, "r", encoding="UTF-8") as pidfile_file:
-                    pid = int(pidfile_file.read())
-            except OSError as err:  # pragma: no cover
-                raise NsNetSimError(f"Failed to open PID file '{self._pidfile}' for writing: {err}") from None
-            # Terminate process
-            try:
-                os.kill(pid, signal.SIGTERM)
-            except ProcessLookupError:  # pragma: no cover
-                self._log_warning(f"Failed to kill StayRTR process PID {pid}")
-            # Remove pid file
-            with contextlib.suppress(FileNotFoundError):
-                os.remove(self._pidfile)
+                self._process.wait(timeout=2)
+            # If that doesn't work, force kill the entire group
+            except subprocess.TimeoutExpired:
+                os.killpg(os.getpgid(self._process.pid), signal.SIGTERM)
 
         # Call parent remove
         super()._remove()

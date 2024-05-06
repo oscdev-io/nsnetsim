@@ -186,6 +186,10 @@ class NamespaceNode(GenericNode):
         """Run command inside the namespace similar to check_call."""
         return self._run_in_ns(args, capture_output=True, text=True, **kwargs)
 
+    def run_in_ns_popen(self, args: List[str], **kwargs: Any) -> subprocess.Popen:
+        """Run command inside the namespace similar to check_call."""
+        return self._run_in_ns_popen(args, **kwargs)
+
     def run_ip(self, args: List[str]) -> Any:
         """Run the 'ip' tool and decode its return output."""
         # Run the IP tool with JSON output
@@ -205,22 +209,6 @@ class NamespaceNode(GenericNode):
 
         return None
 
-    def exec_in_ns(self, args: List[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
-        """Run command inside the namespace."""
-
-        # Build command to execute
-        cmd_args = ["/usr/bin/ip", "netns", "exec", self.namespace]
-        cmd_args.extend(args)
-
-        # Check if we have an environment to pass
-        environment = kwargs.get("environment", {})
-
-        # Run command
-        if environment:
-            os.execve(cmd_args[0], cmd_args, environment)  # nosec: B606
-        else:
-            os.execv(cmd_args[0], cmd_args)  # nosec: B606
-
     def _run_in_ns(self, args: List[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         """Run command inside the namespace."""
 
@@ -230,6 +218,16 @@ class NamespaceNode(GenericNode):
 
         # Run command
         return subprocess.run(cmd_args, check=True, **kwargs)  # nosec
+
+    def _run_in_ns_popen(self, args: List[str], **kwargs: Any) -> subprocess.Popen:
+        """Run command inside the namespace."""
+
+        # Build command to execute
+        cmd_args = ["/usr/bin/ip", "netns", "exec", self.namespace]
+        cmd_args.extend(args)
+
+        # Run command
+        return subprocess.Popen(cmd_args, **kwargs)  # nosec
 
     @property
     def namespace(self) -> str:

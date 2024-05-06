@@ -18,7 +18,6 @@
 
 """ExaBGP router support."""
 
-import contextlib
 import getpass
 import os
 import shutil
@@ -47,7 +46,7 @@ class ExaBGPRouterNode(RouterNode):
     # Log file
     _logfile: str
     # ExaBGP process
-    _exabgp_process: Optional[subprocess.CompletedProcess[str]]
+    _process: Optional[subprocess.Popen]
 
     def _init(self, **kwargs: Any) -> None:
         """Initialize the object."""
@@ -84,7 +83,7 @@ class ExaBGPRouterNode(RouterNode):
             raise NsNetSimError(f"Failed to validate ExaBGP config file '{self._configfile}': {err.stdout}") from None
 
         # We start out with no process
-        self._exabgp_process = None
+        self._process = None
 
     def exabgpcli(self, args: List[str]) -> List[str]:
         """Send a query to ExaBGP."""
@@ -112,13 +111,7 @@ class ExaBGPRouterNode(RouterNode):
         # Call parent create
         super()._create()
 
-        # Work out the arguments we're going to pass
-        # args = ["exabgp"]
-        # # If we were given a config file, add it
-        # if self._configfile:
-        #    args.append(self._configfile)
-        # Run from sh so we can get the console output
-        args = ["sh", "-c", f"exabgp --debug {self._configfile} >> {self._logfile} 2>&1"]
+        args = ["exabgp", "--debug", self._configfile]
 
         # Now for the actual configuration, which is done using the environment
         environment = {
@@ -142,39 +135,22 @@ class ExaBGPRouterNode(RouterNode):
         except OSError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to create ExaBGP fifo file '{self._fifo_out}': {err}") from None
 
-        # Fork ExaBGP into the background for statup
-        # NK: in some odd situations it seems to of hung during startup, so we're going to run it in a forked process so we can
-        # catch any output to console
-        pid = os.fork()
-        if pid == 0:
-            # Run ExaBGP within the network namespace
-            try:
-                self.run_in_ns_check_call(args, env=environment)
-            except subprocess.CalledProcessError as err:
-                raise NsNetSimError(f"Failed to start ExaBGP with configuration file '{self._configfile}': {err.stdout}") from None
-            # Exit child process using os._exit to bypass pytest SystemExit exception
-            os._exit(0)
-        elif pid < 0:
-            raise NsNetSimError("Failed to fork ExaBGP process")
+        # Start StayRTR process using subprocess.Popen
+        logfile_f = open(self._logfile, "w", encoding="UTF-8")  # pylint: disable=consider-using-with
+        self._process = self.run_in_ns_popen(args, env=environment, stdout=logfile_f, stderr=subprocess.STDOUT)
 
     def _remove(self) -> None:
         """Remove the router."""
 
-        # Grab PID of the process...
-        if os.path.exists(self._pidfile):
+        # Kill process
+        if self._process:
+            # Try terminate
+            self._process.terminate()
             try:
-                with open(self._pidfile, "r", encoding="UTF-8") as pidfile_file:
-                    pid = int(pidfile_file.read())
-            except OSError as err:  # pragma: no cover
-                raise NsNetSimError(f"Failed to open PID file '{self._pidfile}' for writing: {err}") from None
-            # Terminate process
-            try:
-                os.kill(pid, signal.SIGTERM)
-            except ProcessLookupError:  # pragma: no cover
-                self._log_warning(f"Failed to kill ExaBGP process PID {pid}")
-            # Remove pid file
-            with contextlib.suppress(FileNotFoundError):
-                os.remove(self._pidfile)
+                self._process.wait(timeout=2)
+            # If that doesn't work, force kill the entire group
+            except subprocess.TimeoutExpired:
+                os.killpg(os.getpgid(self._process.pid), signal.SIGTERM)
 
         # Remove fifo's
         if os.path.exists(self._fifo_in):
