@@ -23,7 +23,7 @@ import json
 import os
 import shutil
 import signal
-import subprocess
+import subprocess  # nosec: B404
 from typing import Any, Dict, List, Optional
 
 from .exceptions import NsNetSimError
@@ -32,7 +32,7 @@ from .router_node import RouterNode
 __all__ = ["StayRTRServerNode"]
 
 
-class StayRTRServerNode(RouterNode):
+class StayRTRServerNode(RouterNode):  # pylint: disable=too-many-instance-attributes
     """StayRTRServerNode implements a network isolated StayRTR server node."""
 
     # Cache file
@@ -82,7 +82,7 @@ class StayRTRServerNode(RouterNode):
             raise NsNetSimError(f'StayRTR config file "{self._slurmfile}" does not exist')
 
         self._pidfile = f"{self._rundir}/stayrtr.pid"
-        self._logfile = kwargs.get("logfile", None)
+        self._logfile = kwargs.get("logfile")
 
         # Check if we have an SSH key and authorized keys file
         self._ssh_key_file = kwargs.get("ssh_key_file")
@@ -126,7 +126,7 @@ class StayRTRServerNode(RouterNode):
             logfile = "/dev/null"
 
         # Start StayRTR process using subprocess.Popen
-        logfile_f = open(logfile, "w", encoding="UTF-8")  # pylint: disable=consider-using-with
+        logfile_f = open(logfile, "w", encoding="UTF-8")  # noqa: SIM115 # pylint: disable=consider-using-with
         self._process = self.run_in_ns_popen(args, env=environment, stdout=logfile_f, stderr=subprocess.STDOUT)
 
         # Write out PID file

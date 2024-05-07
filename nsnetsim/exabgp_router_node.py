@@ -136,7 +136,7 @@ class ExaBGPRouterNode(RouterNode):
             raise NsNetSimError(f"Failed to create ExaBGP fifo file '{self._fifo_out}': {err}") from None
 
         # Start StayRTR process using subprocess.Popen
-        logfile_f = open(self._logfile, "w", encoding="UTF-8")  # pylint: disable=consider-using-with
+        logfile_f = open(self._logfile, "w", encoding="UTF-8")  # noqa: SIM115 # pylint: disable=consider-using-with
         self._process = self.run_in_ns_popen(args, env=environment, stdout=logfile_f, stderr=subprocess.STDOUT)
 
     def _remove(self) -> None:
