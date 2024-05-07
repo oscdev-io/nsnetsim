@@ -186,7 +186,7 @@ class NamespaceNode(GenericNode):
         """Run command inside the namespace similar to check_call."""
         return self._run_in_ns(args, capture_output=True, text=True, **kwargs)
 
-    def run_in_ns_popen(self, args: List[str], **kwargs: Any) -> subprocess.Popen:
+    def run_in_ns_popen(self, args: List[str], **kwargs: Any) -> subprocess.Popen[str]:
         """Run command inside the namespace similar to check_call."""
         return self._run_in_ns_popen(args, **kwargs)
 
@@ -219,7 +219,7 @@ class NamespaceNode(GenericNode):
         # Run command
         return subprocess.run(cmd_args, check=True, **kwargs)  # nosec
 
-    def _run_in_ns_popen(self, args: List[str], **kwargs: Any) -> subprocess.Popen:
+    def _run_in_ns_popen(self, args: List[str], **kwargs: Any) -> subprocess.Popen[str]:
         """Run command inside the namespace."""
 
         # Build command to execute

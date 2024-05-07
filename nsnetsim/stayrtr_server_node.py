@@ -51,7 +51,7 @@ class StayRTRServerNode(RouterNode):  # pylint: disable=too-many-instance-attrib
     _args: List[str]
 
     # Internal process
-    _process: Optional[subprocess.Popen]
+    _process: Optional[subprocess.Popen[str]]
 
     def _init(self, **kwargs: Any) -> None:
         """Initialize the object."""

@@ -46,7 +46,7 @@ class ExaBGPRouterNode(RouterNode):
     # Log file
     _logfile: str
     # ExaBGP process
-    _process: Optional[subprocess.Popen]
+    _process: Optional[subprocess.Popen[str]]
 
     def _init(self, **kwargs: Any) -> None:
         """Initialize the object."""
