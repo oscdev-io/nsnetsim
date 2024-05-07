@@ -16,18 +16,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Tests for ExaBGP."""
+"""Tests for StayRTR."""
 
 
-from nsnetsim.exabgp_router_node import ExaBGPRouterNode
+from nsnetsim.stayrtr_server_node import StayRTRServerNode
 from nsnetsim.switch_node import SwitchNode
 from nsnetsim.topology import Topology
 
-__all__ = ["TestExaBGPRouterNode"]
+__all__ = ["TestStayRTRServerNode"]
 
 
-class TestExaBGPRouterNode:  # pylint: disable=too-few-public-methods
-    """Test the ExaBGPRouterNode class."""
+class TestStayRTRServerNode:  # pylint: disable=too-few-public-methods
+    """Test the StayRTRServerNode class."""
 
     def test_basic_config(self) -> None:
         """Test one router with a configuration file."""
@@ -35,9 +35,9 @@ class TestExaBGPRouterNode:  # pylint: disable=too-few-public-methods
         topology = Topology()
 
         # Add node
-        topology.add_node(ExaBGPRouterNode("r1", configfile="tests/exabgp_router_node/r1.conf"))
+        topology.add_node(StayRTRServerNode("r1", configfile="tests/stayrtr_server_node/a1.conf"))
         node_r1 = topology.node("r1")
-        if not isinstance(node_r1, ExaBGPRouterNode):
+        if not isinstance(node_r1, StayRTRServerNode):
             raise RuntimeError("Node r1 not found")
         # Add interface
         node_r1.add_interface("eth0", mac="02:01:00:00:00:01", ips=["192.168.0.1/24", "fec0::1/64"])

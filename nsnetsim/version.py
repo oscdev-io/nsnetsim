@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Copyright (C) 2019-2023, AllWorldIT.
+# Copyright (C) 2019-2024, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,4 +18,4 @@
 
 """Namespace Network Simulator package version information."""
 
-__version__ = "0.3.2"
+__version__ = "0.4.1"

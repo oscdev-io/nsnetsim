@@ -18,16 +18,13 @@ test_job:
   - pacman -S --noconfirm grep python
   - pacman -S --noconfirm
       git
-      python-pytest-runner
       python-pytest-cov
-      python-pytest-black
       python-pytest-flake8
       python-pytest-pycodestyle
       python-pytest-pydocstyle
-      python-pytest-pylint
       python-pytest-mypy
       python-tox
-  - pacman -S --noconfirm iproute2 bird exabgp
+  - pacman -S --noconfirm iproute2 bird exabgp stayrtr
   # Run tests
   - tox
 
