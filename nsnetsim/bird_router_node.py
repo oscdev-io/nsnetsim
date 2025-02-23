@@ -72,9 +72,12 @@ class BirdRouterNode(RouterNode):
 
         # Test config file
         try:
-            self.run_check_call(["bird", "-c", self._configfile, "-p"])  # nosec
+            res = self.run_check_call(["bird", "-c", self._configfile, "-p"])  # nosec
         except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to validate BIRD config file '{self._configfile}': {err.stdout}") from None
+        # Look for errors in output
+        if "error" in res.stdout:
+            raise NsNetSimError(f"Failed to validate BIRD config file '{self._configfile}': {res.stdout}") from None
 
     # Send something to birdc
     def birdc(self, query: str) -> List[str]:
