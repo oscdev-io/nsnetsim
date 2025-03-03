@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Copyright (C) 2019-2024, AllWorldIT.
+# Copyright (C) 2019-2025, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,10 +20,11 @@
 
 import getpass
 import os
+import pathlib
 import shutil
 import signal
 import subprocess  # nosec
-from typing import Any, List, Optional
+from typing import Any
 
 from .exceptions import NsNetSimError
 from .router_node import RouterNode
@@ -46,9 +47,9 @@ class ExaBGPRouterNode(RouterNode):
     # Log file
     _logfile: str
     # ExaBGP process
-    _process: Optional[subprocess.Popen[str]]
+    _process: subprocess.Popen[str] | None
 
-    def _init(self, **kwargs: Any) -> None:
+    def _init(self, **kwargs: Any) -> None:  # noqa: ANN401
         """Initialize the object."""
         # Call parent create
         super()._init()
@@ -63,7 +64,8 @@ class ExaBGPRouterNode(RouterNode):
         if not configfile:
             raise NsNetSimError("ExaBGP config file not provided")
         # Check it exists
-        if not os.path.exists(configfile):  # pragma: no cover
+        configfile_path = pathlib.Path(configfile)
+        if not configfile_path.exists():  # pragma: no cover
             raise NsNetSimError(f'ExaBGP config file "{configfile}" does not exist')
         # Set config file
         self._configfile = configfile
@@ -85,7 +87,7 @@ class ExaBGPRouterNode(RouterNode):
         # We start out with no process
         self._process = None
 
-    def exabgpcli(self, args: List[str]) -> List[str]:
+    def exabgpcli(self, args: list[str]) -> list[str]:
         """Send a query to ExaBGP."""
 
         cmdline = ["exabgpcli"]
@@ -101,7 +103,7 @@ class ExaBGPRouterNode(RouterNode):
         except subprocess.CalledProcessError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to run ExaBGP command {cmdline}: {err.stderr}") from None
 
-        ret: List[str] = res.stdout.splitlines()
+        ret: list[str] = res.stdout.splitlines()
 
         return ret
 
@@ -136,7 +138,7 @@ class ExaBGPRouterNode(RouterNode):
             raise NsNetSimError(f"Failed to create ExaBGP fifo file '{self._fifo_out}': {err}") from None
 
         # Start StayRTR process using subprocess.Popen
-        logfile_f = open(self._logfile, "w", encoding="UTF-8")  # noqa: SIM115 # pylint: disable=consider-using-with
+        logfile_f = open(self._logfile, "w", encoding="UTF-8")  # noqa: PTH123,SIM115
         self._process = self.run_in_ns_popen(args, env=environment, stdout=logfile_f, stderr=subprocess.STDOUT)
 
     def _remove(self) -> None:
@@ -153,10 +155,12 @@ class ExaBGPRouterNode(RouterNode):
                 os.killpg(os.getpgid(self._process.pid), signal.SIGTERM)
 
         # Remove fifo's
-        if os.path.exists(self._fifo_in):
-            os.remove(self._fifo_in)
-        if os.path.exists(self._fifo_out):
-            os.remove(self._fifo_out)
+        fifo_in_path = pathlib.Path(self._fifo_in)
+        if fifo_in_path.exists():
+            fifo_in_path.unlink()
+        fifo_out_path = pathlib.Path(self._fifo_out)
+        if fifo_out_path.exists():
+            fifo_out_path.unlink()
 
         # Call parent remove
         super()._remove()

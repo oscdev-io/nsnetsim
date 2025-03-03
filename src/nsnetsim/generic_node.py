@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Copyright (C) 2019-2024, AllWorldIT.
+# Copyright (C) 2019-2025, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 
 import logging
 import subprocess  # nosec
-from typing import Any, List
+from typing import Any
 
 __all__ = ["GenericNode"]
 
@@ -35,7 +35,7 @@ class GenericNode:
     # Debug mode
     _debug: bool
 
-    def __init__(self, name: str, **kwargs: Any) -> None:
+    def __init__(self, name: str, **kwargs: Any) -> None:  # noqa: ANN401
         """Initialize the object."""
 
         # Set the node name
@@ -62,20 +62,20 @@ class GenericNode:
         self._log(f'Removing "{self.name}"{self._extra_log}')
         self._remove()
 
-    def run_check_call(self, args: List[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    def run_check_call(self, args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:  # noqa: ANN401
         """Run command inside the namespace similar to check_call."""
-        return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True, text=True, **kwargs)  # nosec
+        return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True, text=True, **kwargs)  # noqa: S603
 
-    def run_check_output(self, args: List[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    def run_check_output(self, args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:  # noqa: ANN401
         """Run command inside the namespace similar to check_call."""
-        return subprocess.run(args, capture_output=True, check=True, text=True, **kwargs)  # nosec
+        return subprocess.run(args, capture_output=True, check=True, text=True, **kwargs)  # noqa: S603
 
     @property
     def name(self) -> str:
         """Return the node name."""
         return self._name
 
-    def _init(self, **kwargs: Any) -> None:
+    def _init(self, **kwargs: Any) -> None:  # noqa: ANN401
         """Initialize this node, should be overridden in child classes."""
         raise NotImplementedError("The _init() method should be defined in the child class")
 

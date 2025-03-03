@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Copyright (C) 2019-2024, AllWorldIT.
+# Copyright (C) 2019-2025, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 """Topology support."""
 
 import logging
-from typing import Dict, List, Optional
 
 from .exceptions import NsNetSimError
 from .generic_node import GenericNode
@@ -33,9 +32,9 @@ class Topology:
     """Topology implements the high level simulation setup."""
 
     # Our list of nodes
-    _nodes: List[GenericNode]
+    _nodes: list[GenericNode]
     # Switches by name
-    _nodes_by_name: Dict[str, GenericNode]
+    _nodes_by_name: dict[str, GenericNode]
 
     def __init__(self) -> None:
         """Initialize the object."""
@@ -72,7 +71,7 @@ class Topology:
                 if isinstance(node, SwitchNode):
                     node.create()
         except NsNetSimError as err:
-            logging.error("Simulation error: %s", err)
+            logging.exception("Simulation error")
             self.destroy()
             raise NsNetSimError(f"Simulation error: {err}") from None
 
@@ -89,7 +88,7 @@ class Topology:
             if isinstance(node, SwitchNode):
                 node.remove()
 
-    def node(self, name: str) -> Optional[GenericNode]:
+    def node(self, name: str) -> GenericNode | None:
         """Return a node with a given name."""
         if name in self._nodes_by_name:
             return self._nodes_by_name[name]

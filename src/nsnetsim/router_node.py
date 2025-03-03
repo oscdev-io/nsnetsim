@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Copyright (C) 2019-2024, AllWorldIT.
+# Copyright (C) 2019-2025, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Namespace Network Simulator package version information."""
+"""Router node support."""
 
-__version__ = "0.4.2"
+from .namespace_node import NamespaceNode
+
+__all__ = ["RouterNode"]
+
+
+class RouterNode(NamespaceNode):
+    """RouterNode implements a network isolated router node."""

@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Copyright (C) 2019-2024, AllWorldIT.
+# Copyright (C) 2019-2025, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,10 +21,11 @@
 import datetime
 import json
 import os
+import pathlib
 import shutil
 import signal
 import subprocess  # nosec: B404
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .exceptions import NsNetSimError
 from .router_node import RouterNode
@@ -38,22 +39,22 @@ class StayRTRServerNode(RouterNode):  # pylint: disable=too-many-instance-attrib
     # Cache file
     _cache: str
     # SLURM file
-    _slurmfile: Optional[str]
+    _slurmfile: str | None
     # PID file
     _pidfile: str
     # Log file
-    _logfile: Optional[str]
+    _logfile: str | None
     # SSH key
-    _ssh_key_file: Optional[str]
+    _ssh_key_file: str | None
     # SSH authorized keys
-    _ssh_authorized_keys_file: Optional[str]
+    _ssh_authorized_keys_file: str | None
     # Args
-    _args: List[str]
+    _args: list[str]
 
     # Internal process
-    _process: Optional[subprocess.Popen[str]]
+    _process: subprocess.Popen[str] | None
 
-    def _init(self, **kwargs: Any) -> None:
+    def _init(self, **kwargs: Any) -> None:  # noqa: ANN401
         """Initialize the object."""
         # Call parent create
         super()._init()
@@ -68,18 +69,21 @@ class StayRTRServerNode(RouterNode):  # pylint: disable=too-many-instance-attrib
             cache = f"{self._rundir}/stayrtr.cache.json"
             # Grab UTC timestamp
             cache_data = {
-                "metadata": {"buildtime": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "vrps": 0},
+                "metadata": {"buildtime": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), "vrps": 0},
                 "roas": [],
             }
-            with open(cache, "w", encoding="UTF-8") as cache_file:
-                cache_file.write(json.dumps(cache_data))
+            cache_file = pathlib.Path(cache)
+            with cache_file.open("w", encoding="UTF-8") as f:
+                f.write(json.dumps(cache_data))
         # Set cache to use
         self._cache = cache
 
         # We should be getting a config file
         self._slurmfile = kwargs.get("slurmfile")
-        if self._slurmfile and not os.path.exists(self._slurmfile):  # pragma: no cover
-            raise NsNetSimError(f'StayRTR config file "{self._slurmfile}" does not exist')
+        if self._slurmfile:
+            slurmfile = pathlib.Path(self._slurmfile)
+            if slurmfile.exists():  # pragma: no cover
+                raise NsNetSimError(f'StayRTR config file "{self._slurmfile}" does not exist')
 
         self._pidfile = f"{self._rundir}/stayrtr.pid"
         self._logfile = kwargs.get("logfile")
@@ -89,13 +93,15 @@ class StayRTRServerNode(RouterNode):  # pylint: disable=too-many-instance-attrib
         self._ssh_authorized_keys_file = None
         if self._ssh_key_file:
             # Make sure the SSH key exists
-            if not os.path.exists(self._ssh_key_file):  # pragma: no cover
+            ssh_keyfile = pathlib.Path(self._ssh_key_file)
+            if not ssh_keyfile.exists():  # pragma: no cover
                 raise NsNetSimError(f'StayRTR SSH key file "{self._ssh_key_file}" does not exist')
             # Make sure we have an authorized keys file
             self._ssh_authorized_keys_file = kwargs.get("ssh_authorized_keys_file")
             if not self._ssh_authorized_keys_file:  # pragma: no cover
                 raise NsNetSimError("SSH authorized keys 'ssh_authorized_keys' must be provided if SSH key 'ssh_key' is provided")
-            if not os.path.exists(self._ssh_authorized_keys_file):
+            ssh_authorized_keys_file = pathlib.Path(self._ssh_authorized_keys_file)
+            if not ssh_authorized_keys_file.exists():
                 raise NsNetSimError(f'StayRTR SSH authorized keys file "{self._ssh_authorized_keys_file}" does not exist')
 
         self._args = kwargs.get("args", [])
@@ -119,18 +125,19 @@ class StayRTRServerNode(RouterNode):  # pylint: disable=too-many-instance-attrib
             args.extend(["-ssh.auth.key.file", self._ssh_authorized_keys_file])
         args.extend(self._args)
 
-        environment: Dict[str, str] = {}
+        environment: dict[str, str] = {}
 
         logfile = self._logfile
         if not logfile:
             logfile = "/dev/null"
 
         # Start StayRTR process using subprocess.Popen
-        logfile_f = open(logfile, "w", encoding="UTF-8")  # noqa: SIM115 # pylint: disable=consider-using-with
+        logfile_f = open(logfile, "w", encoding="UTF-8")  # noqa: PTH123,SIM115
         self._process = self.run_in_ns_popen(args, env=environment, stdout=logfile_f, stderr=subprocess.STDOUT)
 
         # Write out PID file
-        with open(self._pidfile, "w", encoding="UTF-8") as f:
+        pidfile = pathlib.Path(self._pidfile)
+        with pidfile.open("w", encoding="UTF-8") as f:
             f.write(str(self._process.pid))
 
     def _remove(self) -> None:

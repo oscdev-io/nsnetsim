@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Copyright (C) 2019-2024, AllWorldIT.
+# Copyright (C) 2019-2025, AllWorldIT.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,8 +24,9 @@
 import ctypes
 import ctypes.util
 import os
+import pathlib
 from io import BufferedReader
-from typing import IO, Any, Optional, Union
+from typing import IO, Any
 
 __all__ = ["NetNS"]
 
@@ -44,7 +45,7 @@ libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
 #
 
 
-def setns(handle: Union[IO[Any], int], nstype: int) -> int:
+def setns(handle: IO[Any] | int, nstype: int) -> int:
     """
     Change the network namespace of the calling thread.
 
@@ -69,7 +70,7 @@ def setns(handle: Union[IO[Any], int], nstype: int) -> int:
     return ret
 
 
-def get_ns_path(nspath: Optional[str] = None, nsname: Optional[str] = None, nspid: Optional[int] = None) -> str:
+def get_ns_path(nspath: str | None = None, nsname: str | None = None, nspid: int | None = None) -> str:
     """
     Generate a filesystem path from a namespace name or pid.
 
@@ -83,7 +84,10 @@ def get_ns_path(nspath: Optional[str] = None, nsname: Optional[str] = None, nspi
     elif nspid:
         nspath = f"/proc/{nspid}/ns/net"
 
-    if (not nspath) or (not os.path.exists(nspath)):  # pragma: no cover
+    if not nspath:  # pragma: no cover
+        raise ValueError("Either 'nsname' or 'nspid' must be specified")
+    nspath_file = pathlib.Path(nspath)
+    if not nspath_file.exists():  # pragma: no cover
         raise ValueError(f"Namespace path '{nspath}' does not exist")
 
     return nspath
@@ -104,7 +108,7 @@ class NetNS:
     # Our namespace handle
     _myns: BufferedReader
 
-    def __init__(self, nsname: Optional[str] = None, nspath: Optional[str] = "", nspid: Optional[int] = None) -> None:
+    def __init__(self, nsname: str | None = None, nspath: str | None = "", nspid: int | None = None) -> None:
         """Initialize object."""
         # Grab paths
         self._mypath = get_ns_path(nspid=os.getpid())
@@ -113,11 +117,12 @@ class NetNS:
     def __enter__(self) -> None:
         """Enter the namespace using with NetNS(...)."""
         # Save our current namespace, so we can jump back during __exit__
-        self._myns = open(self._mypath, "rb")  # noqa: SIM115
-        with open(self._target_path, "rb") as filefd:
+        self._myns = open(self._mypath, "rb")  # noqa: PTH123
+        target_path = pathlib.Path(self._target_path)
+        with target_path.open("rb") as filefd:
             setns(filefd, CLONE_NEWNET)
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(self, *args: object) -> None:
         """Exit the namespace."""
         setns(self._myns, CLONE_NEWNET)
         self._myns.close()
