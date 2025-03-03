@@ -19,10 +19,10 @@
 """Namespace node support."""
 
 import json
-import os
+import pathlib
 import subprocess  # nosec
 import uuid
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from .exceptions import NsNetSimError
 from .generic_node import GenericNode
@@ -38,15 +38,15 @@ class NamespaceNode(GenericNode):
     # Name of the namespace we've created
     _namespace: str
     # Interfaces we've added to the namespace
-    _interfaces: Dict[str, NamespaceNetworkInterface]
+    _interfaces: dict[str, NamespaceNetworkInterface]
     # Create a run dir
     _rundir: str
     # Routes to add
-    _routes: List[List[str]]
+    _routes: list[list[str]]
     # Indication the namespace was created
     _created: bool
 
-    def _init(self, **kwargs: Any) -> None:  # pylint: disable=unused-argument
+    def _init(self, **kwargs: Any) -> None:  # noqa: ANN401,ARG002
         """Initialize the object."""
 
         self._extra_log = ""
@@ -59,9 +59,10 @@ class NamespaceNode(GenericNode):
 
         # Create a directory in /run for us
         self._rundir = f"/run/nsnetsim/{self._namespace}"
-        if not os.path.exists(self._rundir):
+        rundir_path = pathlib.Path(self._rundir)
+        if not rundir_path.exists():
             try:
-                os.makedirs(self._rundir)
+                rundir_path.mkdir(parents=True)
             except OSError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to create run directory '{self._rundir}': {err}") from None
 
@@ -88,20 +89,22 @@ class NamespaceNode(GenericNode):
             raise NsNetSimError(f"Failed to bring device 'lo' up in namespace '{self.namespace}': {err.stdout}") from None
 
         # Create interfaces
-        for _, interface in self._interfaces.items():
+        for interface in self._interfaces.values():
             # Create interface
             interface.create()
 
         # Drop into namespace
         with NetNS(nsname=self.namespace):
             # Enable forwarding
+            v4_forwarding_path = pathlib.Path("/proc/sys/net/ipv4/conf/all/forwarding")
             try:
-                with open("/proc/sys/net/ipv4/conf/all/forwarding", "w", encoding="UTF-8") as forwarding_file:
+                with v4_forwarding_path.open("w", encoding="UTF-8") as forwarding_file:
                     forwarding_file.write("1")
             except OSError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to enable IPv4 forwarding in network namespace '{self.namespace}': {err}") from None
+            v6_forwarding_path = pathlib.Path("/proc/sys/net/ipv6/conf/all/forwarding")
             try:
-                with open("/proc/sys/net/ipv6/conf/all/forwarding", "w", encoding="UTF-8") as forwarding_file:
+                with v6_forwarding_path.open("w", encoding="UTF-8") as forwarding_file:
                     forwarding_file.write("1")
             except OSError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to enable IPv6 forwarding in network namespace '{self.namespace}': {err}") from None
@@ -119,7 +122,7 @@ class NamespaceNode(GenericNode):
         """Remove the namespace."""
 
         # Remove interfaces first
-        for _, interface in self._interfaces.items():
+        for interface in self._interfaces.values():
             interface.remove()
 
         # Remove the namespace
@@ -131,7 +134,7 @@ class NamespaceNode(GenericNode):
             # Flip flag to indicate that the namespace is no longer created
             self._created = False
 
-    def add_interface(self, name: str, mac: Optional[str] = None, ips: Optional[Union[str, List[str]]] = None) -> None:
+    def add_interface(self, name: str, mac: str | None = None, ips: str | list[str] | None = None) -> None:
         """
         Add network interface to namespace.
 
@@ -160,7 +163,7 @@ class NamespaceNode(GenericNode):
         if ips:
             interface.add_ip(ips)
 
-    def interface(self, name: str) -> Optional[NamespaceNetworkInterface]:
+    def interface(self, name: str) -> NamespaceNetworkInterface | None:
         """
         Return an interface with a specific name.
 
@@ -174,23 +177,23 @@ class NamespaceNode(GenericNode):
         # Else return None
         return None
 
-    def add_route(self, route: List[str]) -> None:
+    def add_route(self, route: list[str]) -> None:
         """Add route to the namespace."""
         self._routes.append(route)
 
-    def run_in_ns_check_call(self, args: List[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    def run_in_ns_check_call(self, args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:  # noqa: ANN401
         """Run command inside the namespace similar to check_call."""
         return self._run_in_ns(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, **kwargs)
 
-    def run_in_ns_check_output(self, args: List[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    def run_in_ns_check_output(self, args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:  # noqa: ANN401
         """Run command inside the namespace similar to check_call."""
         return self._run_in_ns(args, capture_output=True, text=True, **kwargs)
 
-    def run_in_ns_popen(self, args: List[str], **kwargs: Any) -> subprocess.Popen[str]:
+    def run_in_ns_popen(self, args: list[str], **kwargs: Any) -> subprocess.Popen[str]:  # noqa: ANN401
         """Run command inside the namespace similar to check_call."""
         return self._run_in_ns_popen(args, **kwargs)
 
-    def run_ip(self, args: List[str]) -> Any:
+    def run_ip(self, args: list[str]) -> Any:  # noqa: ANN401
         """Run the 'ip' tool and decode its return output."""
         # Run the IP tool with JSON output
         cmd_args = ["/usr/bin/ip", "--json"]
@@ -209,7 +212,7 @@ class NamespaceNode(GenericNode):
 
         return None
 
-    def _run_in_ns(self, args: List[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    def _run_in_ns(self, args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:  # noqa: ANN401
         """Run command inside the namespace."""
 
         # Build command to execute
@@ -217,9 +220,9 @@ class NamespaceNode(GenericNode):
         cmd_args.extend(args)
 
         # Run command
-        return subprocess.run(cmd_args, check=True, **kwargs)  # nosec
+        return subprocess.run(cmd_args, check=True, **kwargs)  # noqa: S603
 
-    def _run_in_ns_popen(self, args: List[str], **kwargs: Any) -> subprocess.Popen[str]:
+    def _run_in_ns_popen(self, args: list[str], **kwargs: Any) -> subprocess.Popen[str]:  # noqa: ANN401
         """Run command inside the namespace."""
 
         # Build command to execute
@@ -227,7 +230,7 @@ class NamespaceNode(GenericNode):
         cmd_args.extend(args)
 
         # Run command
-        return subprocess.Popen(cmd_args, **kwargs)  # nosec
+        return subprocess.Popen(cmd_args, **kwargs)  # noqa: S603
 
     @property
     def namespace(self) -> str:
@@ -235,6 +238,6 @@ class NamespaceNode(GenericNode):
         return self._namespace
 
     @property
-    def routes(self) -> List[List[str]]:
+    def routes(self) -> list[list[str]]:
         """Return the namespace routes."""
         return self._routes

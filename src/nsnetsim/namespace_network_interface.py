@@ -19,11 +19,12 @@
 """Network interface support within a namespace node."""
 
 import ipaddress
+import pathlib
 import random
 import secrets
 import subprocess  # nosec
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from .exceptions import NsNetSimError
 from .generic_node import GenericNode
@@ -44,13 +45,13 @@ class NamespaceNetworkInterface(GenericNode):
     _ifname_host: str
     # Interface mac address
     _mac_address: str
-    _settings: Dict[str, Any]
+    _settings: dict[str, Any]
     # IP's for interface
-    _ip_addresses: List[str]
+    _ip_addresses: list[str]
     # Indication if the interface was created
     _created: bool
 
-    def _init(self, **kwargs: Any) -> None:
+    def _init(self, **kwargs: Any) -> None:  # noqa: ANN401
         """Initialize the object."""
 
         # Make sure we have an namespace
@@ -66,13 +67,13 @@ class NamespaceNetworkInterface(GenericNode):
         self._ifname_host = f"veth-{secrets.token_hex(4)}"
 
         # Assign an interface mac address
-        mac_address: Optional[str] = kwargs.get("mac")
+        mac_address: str | None = kwargs.get("mac")
         if not mac_address:
             mac_address = "".join(
                 [
-                    f"02:{random.randint(0, 255):02x}:",  # nosec
-                    f"{random.randint(0, 255):02x}:{random.randint(0, 255):02x}:",  # nosec
-                    f"{random.randint(0, 255):02x}:{random.randint(0, 255):02x}",  # nosec
+                    f"02:{random.randint(0, 255):02x}:",  # noqa: S311
+                    f"{random.randint(0, 255):02x}:{random.randint(0, 255):02x}:",  # noqa: S311
+                    f"{random.randint(0, 255):02x}:{random.randint(0, 255):02x}",  # noqa: S311
                 ]
             )
         self._mac_address = mac_address
@@ -90,7 +91,7 @@ class NamespaceNetworkInterface(GenericNode):
         # Indicate the interface has not yet been created
         self._created = False
 
-    def _create(self) -> None:  # noqa: CFQ001 # pylint: disable=too-many-branches,too-many-statements
+    def _create(self) -> None:  # noqa: C901,PLR0912,PLR0915
         """Create the interface."""
 
         # Create the interface pair
@@ -137,13 +138,15 @@ class NamespaceNetworkInterface(GenericNode):
 
         # Disable host IPv6 DAD
         try:
-            with open(f"/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_dad", "w", encoding="UTF-8") as ipv6_dad_file:
+            accept_dad_path = pathlib.Path(f"/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_dad")
+            with accept_dad_path.open("w", encoding="UTF-8") as ipv6_dad_file:
                 ipv6_dad_file.write("0")
         except OSError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to set host 'accept_dad' to 0: {err}") from None
         # Disable host IPv6 RA
         try:
-            with open(f"/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_ra", "w", encoding="UTF-8") as ipv6_ra_file:
+            accept_ra_path = pathlib.Path(f"/proc/sys/net/ipv6/conf/{self.ifname_host}/accept_ra")
+            with accept_ra_path.open("w", encoding="UTF-8") as ipv6_ra_file:
                 ipv6_ra_file.write("0")
         except OSError as err:  # pragma: no cover
             raise NsNetSimError(f"Failed to set host 'accept_ra' to 0: {err}") from None
@@ -151,14 +154,16 @@ class NamespaceNetworkInterface(GenericNode):
         # Drop into namespace
         with NetNS(nsname=self.namespace_node.namespace):
             # Disable namespace IPv6 DAD
+            accept_dad_path = pathlib.Path(f"/proc/sys/net/ipv6/conf/{self.ifname}/accept_dad")
             try:
-                with open(f"/proc/sys/net/ipv6/conf/{self.ifname}/accept_dad", "w", encoding="UTF-8") as ipv6_dad_file:
+                with accept_dad_path.open("w", encoding="UTF-8") as ipv6_dad_file:
                     ipv6_dad_file.write(f"{self.ipv6_dad}")
             except OSError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to set namespace 'accept_dad' to {self.ipv6_dad}: {err}") from None
             # Disable namespace IPv6 RA
+            accept_ra_path = pathlib.Path(f"/proc/sys/net/ipv6/conf/{self.ifname}/accept_ra")
             try:
-                with open(f"/proc/sys/net/ipv6/conf/{self.ifname}/accept_ra", "w", encoding="UTF-8") as ipv6_ra_file:
+                with accept_ra_path.open("w", encoding="UTF-8") as ipv6_ra_file:
                     ipv6_ra_file.write(f"{self.ipv6_ra}")
             except OSError as err:  # pragma: no cover
                 raise NsNetSimError(f"Failed to set namespace 'accept_dad' to {self.ipv6_ra}: {err}") from None
@@ -170,9 +175,9 @@ class NamespaceNetworkInterface(GenericNode):
 
             ip_address = ipaddress.ip_network(ip_address_raw, strict=False)
             # Check if we need to add a broadcast address for IPv4
-            if (ip_address.version == 4) and (ip_address.prefixlen < 31):
+            if (ip_address.version == 4) and (ip_address.prefixlen < 31):  # noqa: PLR2004
                 args.extend(["broadcast", f"{ip_address.broadcast_address}"])
-            if ip_address.version == 6:
+            if ip_address.version == 6:  # noqa: PLR2004
                 has_ipv6 = True
 
             # Set interface up on namespace side
@@ -281,7 +286,7 @@ class NamespaceNetworkInterface(GenericNode):
             # Indicate that the interface is no longer created
             self._created = False
 
-    def add_ip(self, ip_address: Union[str, List[str]]) -> None:
+    def add_ip(self, ip_address: str | list[str]) -> None:
         """Add IP to the namespace interface."""
         if isinstance(ip_address, list):
             self._ip_addresses.extend(ip_address)
@@ -314,6 +319,6 @@ class NamespaceNetworkInterface(GenericNode):
         return int(self._settings["ipv6_ra"])
 
     @property
-    def ip_addresses(self) -> List[str]:
+    def ip_addresses(self) -> list[str]:
         """Return the IP addresses for the interface."""
         return self._ip_addresses

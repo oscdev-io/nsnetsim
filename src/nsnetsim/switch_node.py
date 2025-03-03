@@ -20,7 +20,7 @@
 
 import secrets
 import subprocess  # nosec
-from typing import Any, List
+from typing import Any
 
 from .exceptions import NsNetSimError
 from .generic_node import GenericNode
@@ -35,15 +35,12 @@ class SwitchNode(GenericNode):
     # Name of the bridge we've created
     _bridge_name: str
     # Interfaces added to this switch
-    _interfaces: List[NamespaceNetworkInterface]
+    _interfaces: list[NamespaceNetworkInterface]
     # Created flag
     _created: bool
 
-    def _init(self, **kwargs: Any) -> None:
+    def _init(self, **kwargs: Any) -> None:  # noqa: ANN401,ARG002
         """Initialize the object."""
-
-        # NK: Not needed atm
-        # name = kwargs.get("name")
 
         # Set the bridge name we're going to use
         self._bridge_name = f"br-{secrets.token_hex(5)}"
@@ -102,6 +99,6 @@ class SwitchNode(GenericNode):
         return self._bridge_name
 
     @property
-    def interfaces(self) -> List[NamespaceNetworkInterface]:
+    def interfaces(self) -> list[NamespaceNetworkInterface]:
         """Return the interfaces linked to this switch."""
         return self._interfaces

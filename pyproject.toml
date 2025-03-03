@@ -90,5 +90,5 @@ pythonpath = ["src"]
 
 
 [tool.coverage.run]
-source_pkgs = ["birdplan"]
+source_pkgs = ["nsnetsim"]
 relative_files = true

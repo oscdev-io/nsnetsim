@@ -60,10 +60,6 @@ test_job:
       grep
       git
       python-pytest-cov
-      python-pytest-flake8
-      python-pytest-pycodestyle
-      python-pytest-pydocstyle
-      python-pytest-mypy
       python-tox
       iproute2
       bird
@@ -81,7 +77,7 @@ buildtest_job:
       git
       python-tox
   # Set tox work directory
-  - export TOX_WORK_DIR=$(dirname "$PWD")/ilitools.tox
+  - export TOX_WORK_DIR=$(dirname "$PWD")/nsnetsim.tox
   # Run tests
   - tox -e build
 
@@ -94,7 +90,7 @@ buildtest_flit_job:
       git
       python-tox
   # Set tox work directory
-  - export TOX_WORK_DIR=$(dirname "$PWD")/ilitools.tox
+  - export TOX_WORK_DIR=$(dirname "$PWD")/nsnetsim.tox
   # Run tests
   - tox -e build_flit
 
