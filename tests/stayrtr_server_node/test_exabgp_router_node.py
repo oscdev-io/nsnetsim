@@ -18,7 +18,6 @@
 
 """Tests for StayRTR."""
 
-
 from nsnetsim.stayrtr_server_node import StayRTRServerNode
 from nsnetsim.switch_node import SwitchNode
 from nsnetsim.topology import Topology

@@ -18,7 +18,6 @@
 
 """Tests for ExaBGP."""
 
-
 from nsnetsim.exabgp_router_node import ExaBGPRouterNode
 from nsnetsim.switch_node import SwitchNode
 from nsnetsim.topology import Topology

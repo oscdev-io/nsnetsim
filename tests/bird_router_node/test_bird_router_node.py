@@ -151,18 +151,18 @@ class TestBirdRouterNode:
 
         assert len(routerx_master4_output) == 1, "There should be one route on routerX"
         assert "192.168.10.0/24" in routerx_master4_output, 'The route in routerX master4 must be "192.168.10.0/24"'
-        assert (
-            routerx_master4_output["192.168.10.0/24"][0]["protocol"] == "rip4_direct"
-        ), 'The route in routerX master4 must be proto "rip4_direct"'
+        assert routerx_master4_output["192.168.10.0/24"][0]["protocol"] == "rip4_direct", (
+            'The route in routerX master4 must be proto "rip4_direct"'
+        )
 
         assert len(routery_master4_output) == 1, "There should be one route on routerY"
         assert "192.168.10.0/24" in routery_master4_output, 'The route in routerY master4 must be "192.168.10.0/24"'
-        assert (
-            routery_master4_output["192.168.10.0/24"][0]["protocol"] == "rip4"
-        ), 'The route in routerY master4 must be proto "rip4"'
-        assert routery_master4_output["192.168.10.0/24"][0]["nexthops"] == [
-            {"gateway": "192.168.0.1", "interface": "eth0"}
-        ], 'The "gateway" should be "192.168.0.1"'
+        assert routery_master4_output["192.168.10.0/24"][0]["protocol"] == "rip4", (
+            'The route in routerY master4 must be proto "rip4"'
+        )
+        assert routery_master4_output["192.168.10.0/24"][0]["nexthops"] == [{"gateway": "192.168.0.1", "interface": "eth0"}], (
+            'The "gateway" should be "192.168.0.1"'
+        )
 
         routerx_protocol_expected = [
             CustomPytestRegex(r"0001 BIRD [0-9\.]+ ready."),

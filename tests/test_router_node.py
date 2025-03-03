@@ -18,7 +18,6 @@
 
 """Tests for BIRD."""
 
-
 from nsnetsim.router_node import RouterNode
 from nsnetsim.switch_node import SwitchNode
 from nsnetsim.topology import Topology
