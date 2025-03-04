@@ -82,7 +82,7 @@ class StayRTRServerNode(RouterNode):  # pylint: disable=too-many-instance-attrib
         self._slurmfile = kwargs.get("slurmfile")
         if self._slurmfile:
             slurmfile = pathlib.Path(self._slurmfile)
-            if slurmfile.exists():  # pragma: no cover
+            if not slurmfile.exists():  # pragma: no cover
                 raise NsNetSimError(f'StayRTR config file "{self._slurmfile}" does not exist')
 
         self._pidfile = f"{self._rundir}/stayrtr.pid"
